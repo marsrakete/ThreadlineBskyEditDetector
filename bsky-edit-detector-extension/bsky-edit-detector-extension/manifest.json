@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Threadline Bsky Edit Detector",
+  "version": "0.2.0",
+  "description": "Marks mu.social-edited Bluesky posts and shows original/current text with a diff popup.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://bsky.app/*",
+    "https://public.api.bsky.app/*",
+    "https://bsky.social/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://bsky.app/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

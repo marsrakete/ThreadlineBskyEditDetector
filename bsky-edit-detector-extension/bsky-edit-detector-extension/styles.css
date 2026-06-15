@@ -1,0 +1,233 @@
+.bsky-edit-detector-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  margin-left: 0.45em;
+  padding: 0.12em 0.55em;
+  border: 1px solid rgba(20, 130, 75, 0.45);
+  border-radius: 999px;
+  background: rgba(61, 214, 140, 0.18);
+  color: rgb(15, 118, 64);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bsky-edit-detector-badge:hover,
+.bsky-edit-detector-badge:focus-visible {
+  background: rgba(61, 214, 140, 0.28);
+  outline: 2px solid rgba(20, 130, 75, 0.3);
+  outline-offset: 2px;
+}
+
+.bsky-edit-detector-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 28px 18px;
+  background: rgba(15, 23, 42, 0.18);
+  overflow: auto;
+}
+
+.bsky-edit-detector-dialog {
+  position: relative;
+  box-sizing: border-box;
+  width: min(760px, calc(100vw - 36px));
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  padding: 26px 26px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 18px;
+  background: #fff;
+  color: rgb(15, 23, 42);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.24);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.bsky-edit-detector-dialog h2 {
+  margin: 0 42px 12px 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.bsky-edit-detector-dialog h3 {
+  margin: 0 0 18px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.bsky-edit-detector-muted,
+.bsky-edit-detector-note {
+  color: rgb(71, 85, 105);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.bsky-edit-detector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 52px;
+  margin: 26px 0;
+  font-size: 15px;
+}
+
+.bsky-edit-detector-meta span {
+  color: rgb(71, 85, 105);
+}
+
+.bsky-edit-detector-meta strong {
+  font-weight: 500;
+}
+
+.bsky-edit-detector-url {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+
+.bsky-edit-detector-url a {
+  color: rgb(37, 99, 235);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.bsky-edit-detector-url a:hover {
+  text-decoration: underline;
+}
+
+.bsky-edit-detector-diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid rgb(203, 213, 225);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bsky-edit-detector-panel {
+  min-width: 0;
+  padding: 22px;
+  background: #fff;
+}
+
+.bsky-edit-detector-panel + .bsky-edit-detector-panel {
+  border-left: 1px solid rgb(203, 213, 225);
+}
+
+.bsky-edit-detector-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.bsky-edit-detector-added,
+.bsky-edit-detector-removed {
+  border-radius: 4px;
+  padding: 0 0.12em;
+}
+
+.bsky-edit-detector-added {
+  background: rgba(74, 222, 128, 0.28);
+  color: rgb(22, 101, 52);
+}
+
+.bsky-edit-detector-removed {
+  background: rgba(248, 113, 113, 0.25);
+  color: rgb(185, 28, 28);
+  text-decoration: line-through;
+}
+
+.bsky-edit-detector-legend {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  margin: 22px 0;
+  color: rgb(71, 85, 105);
+  font-size: 15px;
+}
+
+.bsky-edit-detector-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bsky-edit-detector-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  text-decoration: none;
+}
+
+.bsky-edit-detector-note {
+  border-top: 1px solid rgb(226, 232, 240);
+  margin: 0;
+  padding-top: 20px;
+}
+
+.bsky-edit-detector-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.bsky-edit-detector-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+
+.bsky-edit-detector-actions button,
+.bsky-edit-detector-close {
+  border: 1px solid rgb(203, 213, 225);
+  background: #fff;
+  color: rgb(15, 23, 42);
+  cursor: pointer;
+}
+
+.bsky-edit-detector-actions button {
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bsky-edit-detector-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.bsky-edit-detector-actions button:hover,
+.bsky-edit-detector-close:hover {
+  background: rgb(248, 250, 252);
+}
+
+@media (max-width: 680px) {
+  .bsky-edit-detector-dialog {
+    padding: 20px;
+  }
+
+  .bsky-edit-detector-diff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bsky-edit-detector-panel + .bsky-edit-detector-panel {
+    border-left: 0;
+    border-top: 1px solid rgb(203, 213, 225);
+  }
+}
