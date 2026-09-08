@@ -4,6 +4,8 @@ Erkennt bearbeitete Bluesky-Posts von mu.social und zeigt Bearbeitungsdetails, V
 
 Projekt: <https://github.com/marsrakete/ThreadlineBskyEditDetector>
 
+Privacy policy: [PRIVACY.md](PRIVACY.md)
+
 Installation in Chrome/Edge:
 
 - ZIP-Datei herunterladen
