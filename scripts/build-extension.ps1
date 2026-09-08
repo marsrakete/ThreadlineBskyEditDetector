@@ -47,7 +47,7 @@ function Invoke-ExtensionChecks {
       throw "Syntaxprüfung fehlgeschlagen: $scriptPath"
     }
   }
-  foreach ($checkPath in @("scripts\check-server-status.cjs", "scripts\check-pds-health.cjs")) {
+  foreach ($checkPath in @("scripts\check-server-status.cjs", "scripts\check-pds-health.cjs", "scripts\check-content-runtime.cjs")) {
     & node (Join-Path $ProjectPath $checkPath)
     if ($LASTEXITCODE -ne 0) {
       throw "Prüfung fehlgeschlagen: $checkPath"

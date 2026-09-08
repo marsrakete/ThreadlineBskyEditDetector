@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Threadline Bluesky Edit & PDS Status",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Edit details and PDS status for Bluesky, Mu, Blacksky and Eurosky. https://github.com/marsrakete/ThreadlineBskyEditDetector",
   "permissions": [
     "storage"

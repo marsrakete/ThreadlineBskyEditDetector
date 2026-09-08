@@ -41,6 +41,8 @@ Version 0.6.0 läuft auf `bsky.app`, `mu.social` und `blacksky.app` sowie deren 
 
 Version 0.6.1 ergänzt das bestätigte Eurosky-Portal `portal.eurosky.tech` und den Eurosky-PDS `eurosky.social` einschließlich seiner Subdomains. `eurosky.app` ist nicht in den Berechtigungen enthalten, weil dafür keine offizielle Zuordnung zum Eurosky-Portal oder -PDS bestätigt ist.
 
+Version 0.6.2 behandelt eine nach einem Erweiterungs-Reload nicht mehr verfügbare Laufzeit-API als normalen Verbindungsfehler. Der offene Tab muss danach aktualisiert werden, damit der Browser das aktuelle Content-Script erneut lädt.
+
 Die Erweiterung erhält zusätzlich Zugriff auf `https://*.host.bsky.network/*`. Bei anderen öffentlichen HTTPS-PDS öffnet „PDS-Prüfung freigeben“ eine Erweiterungsseite, auf der genau dieser Server über den Browser freigegeben werden kann. Die optionale HTTPS-Hostberechtigung erteilt keinen pauschalen Zugriff auf alle Websites. Eine erteilte Serverfreigabe wird vom Browser dauerhaft gespeichert und kann in den Erweiterungseinstellungen entzogen werden. An den PDS gehen keine Cookies, Tokens oder Kontoangaben; angefragt wird nur der feste Health-Pfad. Weiterleitungen werden nicht verfolgt. Ergebnisse liegen nur im Arbeitsspeicher. Alte Antworten werden bei Kontowechseln nicht auf den neuen PDS übertragen.
 
 Prüfung des Health-Workers: `node scripts/check-pds-health.cjs`.

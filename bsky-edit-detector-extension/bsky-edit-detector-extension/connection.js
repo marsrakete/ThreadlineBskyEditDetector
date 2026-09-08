@@ -49,6 +49,19 @@ const BskyEditDetectorConnection = (() => {
     }
   }
 
+  /** Sendet eine Nachricht nur bei verfügbarer Erweiterungs-Laufzeit. @param {object} message Nachricht für den Service Worker. @returns {Promise<object|null>} Antwort des Service Workers oder null nach einem Erweiterungs-Reload. */
+  async function sendRuntimeMessage(message) {
+    const extensionChrome = globalThis.chrome;
+    if (!extensionChrome || !extensionChrome.runtime || typeof extensionChrome.runtime.sendMessage !== "function") {
+      return null;
+    }
+    try {
+      return await extensionChrome.runtime.sendMessage(message);
+    } catch {
+      return null;
+    }
+  }
+
   /** Bereinigt eine Serveradresse. @param {unknown} value Adresse. @returns {string} HTTPS-Ursprung oder Platzhalter. */
   function serverOrigin(value) {
     if (typeof value !== "string") {
@@ -147,7 +160,7 @@ const BskyEditDetectorConnection = (() => {
     setField("health-details", "–");
     allowPds.hidden = true;
     try {
-      const result = await chrome.runtime.sendMessage({ type: "bsky-pds-health", pds: healthPds });
+      const result = await sendRuntimeMessage({ type: "bsky-pds-health", pds: healthPds });
       // Vor dem Rendern den aktuellen Kontospeicher erneut lesen.
       refresh();
       if (generation !== healthGeneration) {
@@ -184,7 +197,10 @@ const BskyEditDetectorConnection = (() => {
   async function openPdsPermission() {
     refresh();
     try {
-      await chrome.runtime.sendMessage({ type: "bsky-pds-permission", pds: healthPds });
+      const result = await sendRuntimeMessage({ type: "bsky-pds-permission", pds: healthPds });
+      if (!result?.ok) {
+        throw new Error("Freigabe nicht geöffnet");
+      }
       lastHealthAttempt = 0;
     } catch {
       setField("health", "Freigabe konnte nicht geöffnet werden – Erweiterung neu laden");
@@ -224,7 +240,7 @@ const BskyEditDetectorConnection = (() => {
     lastStatusAttempt = Date.now();
     setField("server-status", "Status wird abgerufen …");
     try {
-      const snapshot = await chrome.runtime.sendMessage({ type: "bsky-server-status" });
+      const snapshot = await sendRuntimeMessage({ type: "bsky-server-status" });
       if (!snapshot || typeof snapshot.ok !== "boolean" || !Number.isFinite(snapshot.checkedAt)) {
         throw new Error("Keine Statusantwort");
       }
