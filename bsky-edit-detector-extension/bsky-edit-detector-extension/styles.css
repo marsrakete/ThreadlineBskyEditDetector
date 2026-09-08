@@ -231,3 +231,44 @@
     border-top: 1px solid rgb(203, 213, 225);
   }
 }
+.bsky-edit-detector-connection {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2147483646;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  border: 1px solid #94a3b8;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 4px 20px #0f172a26;
+  font: 13px/1.5 system-ui, sans-serif;
+}
+
+.bsky-edit-detector-connection summary {
+  padding: 9px 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bsky-edit-detector-connection summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.bsky-edit-detector-connection-body {
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 26px);
+  max-height: min(65vh, 520px);
+  overflow: auto;
+  padding: 0 13px 13px;
+  overflow-wrap: anywhere;
+}
+
+.bsky-edit-detector-connection dl { margin: 0; }
+.bsky-edit-detector-connection dt { margin-top: 9px; color: #475569; }
+.bsky-edit-detector-connection dd { margin: 1px 0 0; }
+.bsky-edit-detector-connection p { margin: 13px 0 0; color: #475569; font-size: 12px; }

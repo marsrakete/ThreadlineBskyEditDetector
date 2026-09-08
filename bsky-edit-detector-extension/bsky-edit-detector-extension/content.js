@@ -38,19 +38,33 @@
     };
   }
 
+  /** Fragt die öffentliche API ab und meldet das Ergebnis. @param {string} method XRPC-Methode. @param {object} params Suchparameter. @returns {Promise<object>} JSON-Antwort; wirft bei Fehlern. */
   async function xrpc(method, params) {
     const qs = new URLSearchParams(params);
-    const response = await fetch(`${API_BASE}/${method}?${qs.toString()}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`${method} failed: ${response.status} ${text}`.trim());
+    let response;
+    try {
+      response = await fetch(`${API_BASE}/${method}?${qs.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+    } catch (error) {
+      BskyEditDetectorConnection.reportRequest(method, "Netzwerkfehler");
+      throw error;
     }
 
-    return response.json();
+    if (!response.ok) {
+      BskyEditDetectorConnection.reportRequest(method, `HTTP ${response.status}`);
+      throw new Error(`${method} failed: ${response.status}`);
+    }
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      BskyEditDetectorConnection.reportRequest(method, "Ungültige JSON-Antwort");
+      throw error;
+    }
+    BskyEditDetectorConnection.reportRequest(method, `Erfolgreich · HTTP ${response.status}`);
+    return data;
   }
 
   async function resolveHandleToDid(actor) {

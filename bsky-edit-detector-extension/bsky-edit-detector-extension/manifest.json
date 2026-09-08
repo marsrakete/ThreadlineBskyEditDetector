@@ -1,22 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "Threadline Bsky Edit Detector",
-  "version": "0.2.0",
-  "description": "Marks mu.social-edited Bluesky posts and shows original/current text with a diff popup.",
+  "name": "Threadline Bluesky Edit & PDS Status",
+  "version": "0.5.1",
+  "description": "Identifies mu.social-edited Bluesky posts and shows edit details, connection information, and direct PDS status.",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://bsky.app/*",
     "https://public.api.bsky.app/*",
-    "https://bsky.social/*"
+    "https://bsky.social/*",
+    "https://status.bsky.app/*",
+    "https://*.host.bsky.network/*"
   ],
+  "optional_host_permissions": ["https://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://bsky.app/*"
       ],
       "js": [
+        "server-status.js",
+        "connection.js",
         "content.js"
       ],
       "css": [
