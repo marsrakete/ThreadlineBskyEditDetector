@@ -44,6 +44,8 @@
     if (host === "bsky.app") return true;
     if (host === "mu.social" || host.endsWith(".mu.social")) return true;
     if (host === "blacksky.app" || host.endsWith(".blacksky.app")) return true;
+    if (host === "portal.eurosky.tech") return true;
+    if (host === "eurosky.social" || host.endsWith(".eurosky.social")) return true;
     return false;
   }
 

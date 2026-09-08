@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Threadline Bluesky Edit & PDS Status",
-  "version": "0.6.0",
-  "description": "Edit details and PDS status for Bluesky, Mu and Blacksky. https://github.com/marsrakete/ThreadlineBskyEditDetector",
+  "version": "0.6.1",
+  "description": "Edit details and PDS status for Bluesky, Mu, Blacksky and Eurosky. https://github.com/marsrakete/ThreadlineBskyEditDetector",
   "permissions": [
     "storage"
   ],
@@ -12,6 +12,9 @@
     "https://*.mu.social/*",
     "https://blacksky.app/*",
     "https://*.blacksky.app/*",
+    "https://portal.eurosky.tech/*",
+    "https://eurosky.social/*",
+    "https://*.eurosky.social/*",
     "https://public.api.bsky.app/*",
     "https://bsky.social/*",
     "https://status.bsky.app/*",
@@ -28,7 +31,10 @@
         "https://mu.social/*",
         "https://*.mu.social/*",
         "https://blacksky.app/*",
-        "https://*.blacksky.app/*"
+        "https://*.blacksky.app/*",
+        "https://portal.eurosky.tech/*",
+        "https://eurosky.social/*",
+        "https://*.eurosky.social/*"
       ],
       "js": [
         "server-status.js",

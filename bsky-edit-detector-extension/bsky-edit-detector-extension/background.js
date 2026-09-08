@@ -150,6 +150,12 @@ function isSupportedApplicationPage(pageUrl) {
   if (host === "blacksky.app" || host.endsWith(".blacksky.app")) {
     return true;
   }
+  if (host === "portal.eurosky.tech") {
+    return true;
+  }
+  if (host === "eurosky.social" || host.endsWith(".eurosky.social")) {
+    return true;
+  }
   return false;
 }
 

@@ -2,7 +2,7 @@
 
 Last updated: September 8, 2026
 
-Threadline Bluesky Edit & PDS Status is a browser extension that identifies supported edited AT Protocol posts and displays connection and Personal Data Server (PDS) status information. This policy explains how the extension handles data while it is running on supported Bluesky, Mu, and Blacksky pages.
+Threadline Bluesky Edit & PDS Status is a browser extension that identifies supported edited AT Protocol posts and displays connection and Personal Data Server (PDS) status information. This policy explains how the extension handles data while it is running on supported Bluesky, Mu, Blacksky, and Eurosky pages.
 
 ## Data the extension reads
 

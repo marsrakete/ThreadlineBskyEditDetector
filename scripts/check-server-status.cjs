@@ -52,6 +52,10 @@ async function checkWorker() {
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.mu.social/profile/a/post/1")', worker), true);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://blacksky.app/profile/a/post/1")', worker), true);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.blacksky.app/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://portal.eurosky.tech/")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://eurosky.social/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.eurosky.social/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://eurosky.app/")', worker), false);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://blacksky.app.evil.example/")', worker), false);
   assert.equal(vm.runInContext('isSupportedApplicationPage("http://mu.social/")', worker), false);
   const [first, second] = await Promise.all([
@@ -75,7 +79,7 @@ async function checkWorker() {
   fail = false;
   const recovered = await vm.runInContext("getStatus()", worker);
   assert.equal(recovered.ok, true);
-  console.log("PASS: Exakte PDS-Zuordnung, Seitenfreigabe für Bluesky, Mu und Blacksky, Statuswerte, Anfragebündelung, Cache, Fehler und Wiederherstellung.");
+  console.log("PASS: Exakte PDS-Zuordnung, Seitenfreigabe für Bluesky, Mu, Blacksky und Eurosky, Statuswerte, Anfragebündelung, Cache, Fehler und Wiederherstellung.");
 }
 
 checkWorker().catch((error) => {

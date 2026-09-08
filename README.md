@@ -39,6 +39,8 @@ Version 0.5.0 ergänzt eine direkte Prüfung des gespeicherten PDS über `/xrpc/
 
 Version 0.6.0 läuft auf `bsky.app`, `mu.social` und `blacksky.app` sowie deren Subdomains. Links im einheitlichen Pfad `/profile/<Handle>/post/<Post-ID>` werden auf allen drei Weboberflächen erkannt. Die direkte PDS-Prüfung kann die fest eingerichteten Server unter `*.host.bsky.network`, `*.mu.social` und `*.blacksky.app` erreichen; für andere PDS bleibt die gezielte Browserfreigabe erforderlich. Die Postdaten kommen weiterhin von `public.api.bsky.app`. Falls ein anderer Dienst dort nicht auffindbare Posts nutzt, kann die Erweiterung dessen Beiträge nicht erkennen, bis er über diesen öffentlichen Endpunkt verfügbar ist.
 
+Version 0.6.1 ergänzt das bestätigte Eurosky-Portal `portal.eurosky.tech` und den Eurosky-PDS `eurosky.social` einschließlich seiner Subdomains. `eurosky.app` ist nicht in den Berechtigungen enthalten, weil dafür keine offizielle Zuordnung zum Eurosky-Portal oder -PDS bestätigt ist.
+
 Die Erweiterung erhält zusätzlich Zugriff auf `https://*.host.bsky.network/*`. Bei anderen öffentlichen HTTPS-PDS öffnet „PDS-Prüfung freigeben“ eine Erweiterungsseite, auf der genau dieser Server über den Browser freigegeben werden kann. Die optionale HTTPS-Hostberechtigung erteilt keinen pauschalen Zugriff auf alle Websites. Eine erteilte Serverfreigabe wird vom Browser dauerhaft gespeichert und kann in den Erweiterungseinstellungen entzogen werden. An den PDS gehen keine Cookies, Tokens oder Kontoangaben; angefragt wird nur der feste Health-Pfad. Weiterleitungen werden nicht verfolgt. Ergebnisse liegen nur im Arbeitsspeicher. Alte Antworten werden bei Kontowechseln nicht auf den neuen PDS übertragen.
 
 Prüfung des Health-Workers: `node scripts/check-pds-health.cjs`.
