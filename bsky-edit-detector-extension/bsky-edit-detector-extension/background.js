@@ -126,9 +126,36 @@ async function loadStatus() {
   }
 }
 
-/** Bearbeitet ausschließlich Statusanfragen aus eigenen Bluesky-Content-Scripts. @param {object} message Nachricht. @param {object} sender Absender. @param {Function} sendResponse Antwortkanal. @returns {boolean} Ob der asynchrone Antwortkanal offen bleibt. */
+/** Prüft, ob eine Erweiterungsseite zu einer unterstützten Bluesky-Weboberfläche gehört. @param {string|undefined} pageUrl URL der sendenden Seite. @returns {boolean} Ob die Nachricht von einer freigegebenen Seite kommt. */
+function isSupportedApplicationPage(pageUrl) {
+  if (typeof pageUrl !== "string") {
+    return false;
+  }
+  let url;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase();
+  if (host === "bsky.app") {
+    return true;
+  }
+  if (host === "mu.social" || host.endsWith(".mu.social")) {
+    return true;
+  }
+  if (host === "blacksky.app" || host.endsWith(".blacksky.app")) {
+    return true;
+  }
+  return false;
+}
+
+/** Bearbeitet ausschließlich Statusanfragen aus eigenen Content-Scripts auf unterstützten Bluesky-Weboberflächen. @param {object} message Nachricht. @param {object} sender Absender. @param {Function} sendResponse Antwortkanal. @returns {boolean} Ob der asynchrone Antwortkanal offen bleibt. */
 function onMessage(message, sender, sendResponse) {
-  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith("https://bsky.app/")) {
+  if (sender.id !== chrome.runtime.id || !isSupportedApplicationPage(sender.url)) {
     return false;
   }
   if (message?.type === "bsky-server-status") {

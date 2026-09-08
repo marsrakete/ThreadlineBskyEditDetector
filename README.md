@@ -2,6 +2,8 @@
 
 Erkennt bearbeitete Bluesky-Posts von mu.social und zeigt Bearbeitungsdetails, Verbindungsinformationen sowie den direkten PDS-Status.
 
+Projekt: <https://github.com/marsrakete/ThreadlineBskyEditDetector>
+
 Installation in Chrome/Edge:
 
 - ZIP-Datei herunterladen
@@ -32,6 +34,8 @@ Ein PDS wird nur bei einem eindeutigen, vollständigen Hosttreffer im Komponente
 Prüfung der Serverzuordnung und des Status-Workers: `node scripts/check-server-status.cjs`.
 
 Version 0.5.0 ergänzt eine direkte Prüfung des gespeicherten PDS über `/xrpc/_health`. Bei geöffneter, sichtbarer Anzeige wird jeder PDS höchstens einmal pro Minute geprüft (10 Sekunden Timeout). Angezeigt werden Erreichbarkeit des Health-Endpunkts, Antwortzeit inklusive JSON-Antwort, Serverversion und Prüfzeitpunkt. HTTP-Fehler, Netzwerkfehler, Timeouts und ungültige Antworten werden getrennt ausgewiesen. Eine erfolgreiche Health-Antwort garantiert keine funktionierende Anmeldung oder vollständige Verfügbarkeit aller PDS-Funktionen. Fehlt die gespeicherte PDS-Adresse, findet keine Prüfung statt; der Anmeldedienst wird nicht ersatzweise geprüft.
+
+Version 0.6.0 läuft auf `bsky.app`, `mu.social` und `blacksky.app` sowie deren Subdomains. Links im einheitlichen Pfad `/profile/<Handle>/post/<Post-ID>` werden auf allen drei Weboberflächen erkannt. Die direkte PDS-Prüfung kann die fest eingerichteten Server unter `*.host.bsky.network`, `*.mu.social` und `*.blacksky.app` erreichen; für andere PDS bleibt die gezielte Browserfreigabe erforderlich. Die Postdaten kommen weiterhin von `public.api.bsky.app`. Falls ein anderer Dienst dort nicht auffindbare Posts nutzt, kann die Erweiterung dessen Beiträge nicht erkennen, bis er über diesen öffentlichen Endpunkt verfügbar ist.
 
 Die Erweiterung erhält zusätzlich Zugriff auf `https://*.host.bsky.network/*`. Bei anderen öffentlichen HTTPS-PDS öffnet „PDS-Prüfung freigeben“ eine Erweiterungsseite, auf der genau dieser Server über den Browser freigegeben werden kann. Die optionale HTTPS-Hostberechtigung erteilt keinen pauschalen Zugriff auf alle Websites. Eine erteilte Serverfreigabe wird vom Browser dauerhaft gespeichert und kann in den Erweiterungseinstellungen entzogen werden. An den PDS gehen keine Cookies, Tokens oder Kontoangaben; angefragt wird nur der feste Health-Pfad. Weiterleitungen werden nicht verfolgt. Ergebnisse liegen nur im Arbeitsspeicher. Alte Antworten werden bei Kontowechseln nicht auf den neuen PDS übertragen.
 

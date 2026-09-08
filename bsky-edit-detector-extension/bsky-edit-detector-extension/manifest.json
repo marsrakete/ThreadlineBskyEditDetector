@@ -1,13 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Threadline Bluesky Edit & PDS Status",
-  "version": "0.5.1",
-  "description": "Identifies mu.social-edited Bluesky posts and shows edit details, connection information, and direct PDS status.",
+  "version": "0.6.0",
+  "description": "Edit details and PDS status for Bluesky, Mu and Blacksky. https://github.com/marsrakete/ThreadlineBskyEditDetector",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://bsky.app/*",
+    "https://mu.social/*",
+    "https://*.mu.social/*",
+    "https://blacksky.app/*",
+    "https://*.blacksky.app/*",
     "https://public.api.bsky.app/*",
     "https://bsky.social/*",
     "https://status.bsky.app/*",
@@ -20,7 +24,11 @@
   "content_scripts": [
     {
       "matches": [
-        "https://bsky.app/*"
+        "https://bsky.app/*",
+        "https://mu.social/*",
+        "https://*.mu.social/*",
+        "https://blacksky.app/*",
+        "https://*.blacksky.app/*"
       ],
       "js": [
         "server-status.js",

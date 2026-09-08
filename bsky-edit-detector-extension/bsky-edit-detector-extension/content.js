@@ -27,7 +27,7 @@
       return null;
     }
 
-    if (url.hostname !== "bsky.app") return null;
+    if (!isSupportedPostHost(url.hostname)) return null;
     const match = url.pathname.match(POST_PATH_RE);
     if (!match) return null;
 
@@ -36,6 +36,15 @@
       rkey: decodeURIComponent(match[2]),
       sourceUrl: url.href,
     };
+  }
+
+  /** Prüft, ob ein Host zu einer unterstützten Bluesky-Weboberfläche oder deren Subdomain gehört. @param {string} hostname Hostname aus einer Post-URL. @returns {boolean} Ob die URL für die Post-Erkennung unterstützt wird. */
+  function isSupportedPostHost(hostname) {
+    const host = hostname.toLowerCase();
+    if (host === "bsky.app") return true;
+    if (host === "mu.social" || host.endsWith(".mu.social")) return true;
+    if (host === "blacksky.app" || host.endsWith(".blacksky.app")) return true;
+    return false;
   }
 
   /** Fragt die öffentliche API ab und meldet das Ergebnis. @param {string} method XRPC-Methode. @param {object} params Suchparameter. @returns {Promise<object>} JSON-Antwort; wirft bei Fehlern. */

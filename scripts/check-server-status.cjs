@@ -26,6 +26,7 @@ async function checkWorker() {
   let fail = false;
   let listener;
   const worker = vm.createContext({
+    URL,
     Date: { now() { return now; } },
     AbortSignal,
     chrome: { runtime: { id: "test", onMessage: { addListener(callback) { listener = callback; } } } },
@@ -46,6 +47,13 @@ async function checkWorker() {
     },
   });
   vm.runInContext(fs.readFileSync(path.join(root, "background.js"), "utf8"), worker);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://bsky.app/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://mu.social/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.mu.social/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://blacksky.app/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.blacksky.app/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://blacksky.app.evil.example/")', worker), false);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("http://mu.social/")', worker), false);
   const [first, second] = await Promise.all([
     vm.runInContext("getStatus()", worker),
     vm.runInContext("getStatus()", worker),
@@ -67,7 +75,7 @@ async function checkWorker() {
   fail = false;
   const recovered = await vm.runInContext("getStatus()", worker);
   assert.equal(recovered.ok, true);
-  console.log("PASS: Exakte PDS-Zuordnung, Gruppen, Mehrdeutigkeit, Statuswerte, Anfragebündelung, Cache, Fehler und Wiederherstellung.");
+  console.log("PASS: Exakte PDS-Zuordnung, Seitenfreigabe für Bluesky, Mu und Blacksky, Statuswerte, Anfragebündelung, Cache, Fehler und Wiederherstellung.");
 }
 
 checkWorker().catch((error) => {
