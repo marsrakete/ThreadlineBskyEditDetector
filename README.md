@@ -22,6 +22,9 @@ Nach einem Update der Erweiterung muss sie auf der Erweiterungsseite neu geladen
 - Unten rechts befindet sich die auf- und zuklappbare Anzeige „Threadline · Verbindung“. Sie zeigt den Netzwerkstatus des Browsers, das gewählte Konto, Handle und DID sowie den gespeicherten PDS und Anmeldedienst.
 - Die Anzeige informiert über den letzten Abruf der öffentlichen Bluesky-API und über den allgemeinen Status von [status.bsky.app](https://status.bsky.app/).
 - Sie prüft den gespeicherten PDS direkt über den festen Endpunkt `/xrpc/_health`. Angezeigt werden Erreichbarkeit, Antwortzeit, Serverversion und gegebenenfalls ein HTTP-, Netzwerk- oder Timeout-Fehler.
+- Bei einem Post erkennt sie, ob dessen Autor den WSocial-PDS `pds.wsocial.network` nutzt. Ein WSocial-Handle wird ergänzend ausgewiesen.
+- Hat ein WSocial-Konto für einen eigenen Originalpost Antworten eingeschränkt, erscheint ein auffälliger Hinweis mit dem erlaubten Antwortkreis oder „Antworten gesperrt“.
+- Für das lokal eingeloggte Bluesky-Konto zeigt die Erweiterung, ob eine Antwort laut öffentlicher Threadgate-Regel möglich ist. Sie berücksichtigt Erwähnungen, Folgebeziehungen, öffentliche Antwortlisten und bekannte Blockierungen.
 - Eine sichtbare, geöffnete Anzeige ruft Status- und PDS-Informationen höchstens einmal pro Minute erneut ab.
 
 Die Erweiterung unterstützt Postseiten im Format `/profile/<Handle>/post/<Post-ID>` auf folgenden Weboberflächen:
@@ -33,6 +36,8 @@ Die Erweiterung unterstützt Postseiten im Format `/profile/<Handle>/post/<Post-
 - `eurosky.social` und deren Subdomains
 
 Die Postdaten werden über `public.api.bsky.app` abgerufen. Ein Post kann deshalb nur erkannt werden, wenn diese öffentliche API ihn bereitstellt.
+
+Die WSocial-PDS wird aus dem öffentlichen DID-Dokument im PLC-Verzeichnis ermittelt. Antwortbeschränkungen werden nur für Originalposts erkannt, da ein Threadgate immer zum ersten Post eines Threads gehört.
 
 ## Grenzen der Statusanzeige
 

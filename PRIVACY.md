@@ -9,6 +9,8 @@ Threadline Bluesky Edit & PDS Status is a browser extension that identifies supp
 The extension reads the following data only to provide its visible features:
 
 - Public post links and public post records, including post text, original text when available, timestamps, handles, DIDs, and record identifiers. This is used to identify and display supported post edits.
+- Public DID documents and public threadgate records for WSocial indicators. The DID document is used to identify the post author's PDS, and a threadgate record is used to show a reply restriction on an original post.
+- Public follow relationships and public reply-list entries when determining whether the selected local account can reply under a WSocial threadgate. The extension only uses the selected account DID; it does not use or transmit session tokens.
 - The Bluesky web application's local session record (`BSKY_STORAGE`) on the current supported page. The extension extracts the selected account's handle, DID, PDS address, and sign-in service address to show connection information.
 - The PDS address from that session record, when available, to perform an optional direct health check.
 
@@ -19,6 +21,8 @@ The local session record can contain authentication tokens. The extension does n
 The extension makes HTTPS requests only for its user-facing features:
 
 - To `public.api.bsky.app` for public AT Protocol post records and handle resolution.
+- To `public.api.bsky.app` for public follow relationships and public reply-list membership when evaluating a WSocial reply restriction.
+- To `plc.directory` for the public DID document of a post author when checking whether the account uses the WSocial PDS.
 - To `status.bsky.app` for Bluesky's published overall service status and component status.
 - To the selected PDS at the fixed public path `/xrpc/_health` after the user opens the connection panel. For PDS hosts outside the built-in host list, the browser asks the user to grant access to that specific PDS before the request is made.
 

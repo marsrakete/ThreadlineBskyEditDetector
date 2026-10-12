@@ -24,6 +24,45 @@
   outline-offset: 2px;
 }
 
+.bsky-edit-detector-signal {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.45em;
+  padding: 0.16em 0.58em;
+  border: 1px solid;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.bsky-edit-detector-signal--provider {
+  border-color: rgb(79, 70, 229);
+  background: rgb(238, 242, 255);
+  color: rgb(55, 48, 163);
+}
+
+.bsky-edit-detector-signal--restriction {
+  border-color: rgb(194, 65, 12);
+  background: rgb(255, 237, 213);
+  color: rgb(154, 52, 18);
+}
+
+.bsky-edit-detector-signal--reply-possible {
+  border-color: rgb(21, 128, 61);
+  background: rgb(220, 252, 231);
+  color: rgb(20, 83, 45);
+}
+
+.bsky-edit-detector-signal--reply-blocked {
+  border-color: rgb(185, 28, 28);
+  background: rgb(254, 226, 226);
+  color: rgb(127, 29, 29);
+}
+
 .bsky-edit-detector-overlay {
   position: fixed;
   inset: 0;

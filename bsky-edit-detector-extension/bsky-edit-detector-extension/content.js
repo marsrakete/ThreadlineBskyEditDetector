@@ -6,13 +6,20 @@
   const CACHE_TTL_MS = 10 * 60 * 1000;
   const MAX_PARALLEL = 4;
   const SCAN_DELAY_MS = 350;
+  const PLC_DIRECTORY_URL = "https://plc.directory";
+  const WSOCIAL_PDS_HOSTS = new Set(["pds.wsocial.network"]);
 
   const memoryCache = new Map();
+  const pdsCache = new Map();
+  const relationshipCache = new Map();
+  const listMembershipCache = new Map();
   const pending = new Map();
   let activeRequests = 0;
   const queue = [];
   let scanTimer = null;
   let activeDialog = null;
+
+  /** Plant einen gebündelten Durchlauf der sichtbaren Post-Links. Keine Parameter. @returns {void} */
 
   function scheduleScan() {
     clearTimeout(scanTimer);
@@ -47,6 +54,240 @@
     if (host === "portal.eurosky.tech") return true;
     if (host === "eurosky.social" || host.endsWith(".eurosky.social")) return true;
     return false;
+  }
+
+  /** Liest die PDS-Adresse aus einem did:plc-Dokument. @param {object} didDocument DID-Dokument aus dem PLC-Verzeichnis. @returns {string} HTTPS-Ursprung oder leerer String. */
+  function pdsFromDidDocument(didDocument) {
+    if (!didDocument || !Array.isArray(didDocument.service)) return "";
+
+    for (const service of didDocument.service) {
+      if (!service || service.type !== "AtprotoPersonalDataServer") continue;
+      if (typeof service.serviceEndpoint !== "string") continue;
+
+      try {
+        const endpoint = new URL(service.serviceEndpoint);
+        if (endpoint.protocol === "https:") return endpoint.origin;
+      } catch {
+        continue;
+      }
+    }
+    return "";
+  }
+
+  /** Ermittelt einmalig pro did:plc die veröffentlichte PDS-Adresse. @param {string} did Dezentrale Kennung des Kontos. @returns {Promise<string>} HTTPS-Ursprung oder leerer String bei unbekanntem PDS. */
+  async function getPdsForDid(did) {
+    if (!did.startsWith("did:plc:")) return "";
+    if (pdsCache.has(did)) return pdsCache.get(did);
+
+    const task = fetch(`${PLC_DIRECTORY_URL}/${encodeURIComponent(did)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) return "";
+        const didDocument = await response.json();
+        return pdsFromDidDocument(didDocument);
+      })
+      .catch(() => "");
+
+    pdsCache.set(did, task);
+    return task;
+  }
+
+  /** Prüft, ob eine PDS-Adresse zum bekannten WSocial-PDS gehört. @param {string} pds HTTPS-Ursprung einer PDS. @returns {boolean} Ob die PDS von WSocial betrieben wird. */
+  function isWsocialPds(pds) {
+    try {
+      return WSOCIAL_PDS_HOSTS.has(new URL(pds).hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  }
+
+  /** Prüft, ob ein Handle die öffentliche WSocial-Domain nutzt. @param {string} handle Handle eines Kontos. @returns {boolean} Ob das Handle auf wsocial.eu endet. */
+  function isWsocialHandle(handle) {
+    const normalized = String(handle || "").toLowerCase();
+    if (normalized === "wsocial.eu") return true;
+    return normalized.endsWith(".wsocial.eu");
+  }
+
+  /** Übersetzt eine Threadgate-Regel in einen lesbaren Antwortkreis. @param {object} rule Eintrag aus `threadgate.allow`. @returns {string} Deutscher Regelname oder leerer String. */
+  function labelThreadgateRule(rule) {
+    if (!rule || typeof rule.$type !== "string") return "";
+    if (rule.$type === "app.bsky.feed.threadgate#mentionRule") return "Erwähnte";
+    if (rule.$type === "app.bsky.feed.threadgate#followerRule") return "Follower";
+    if (rule.$type === "app.bsky.feed.threadgate#followingRule") return "Gefolgte";
+    if (rule.$type === "app.bsky.feed.threadgate#listRule") return "Liste";
+    return "";
+  }
+
+  /** Fasst eine Threadgate-Antwortbeschränkung für die Anzeige zusammen. @param {object|null} record Threadgate-Record oder null. @returns {string} Hinweistext oder leerer String, wenn Antworten offen sind. */
+  function getReplyRestriction(record) {
+    if (!record || !Array.isArray(record.allow)) return "";
+    if (record.allow.length === 0) return "Antworten gesperrt";
+
+    const labels = [];
+    for (const rule of record.allow) {
+      const label = labelThreadgateRule(rule);
+      if (label && !labels.includes(label)) labels.push(label);
+    }
+    if (labels.length === 0) return "Antworten eingeschränkt";
+    return `Antworten nur für: ${labels.join(", ")}`;
+  }
+
+  /** Liest den optionalen Threadgate-Record eines Originalposts. @param {string} did DID des Post-Autors. @param {string} rkey Record-Schlüssel des Originalposts. @returns {Promise<object|null>} Threadgate-Record oder null, wenn keine Beschränkung gespeichert ist. */
+  async function getThreadgateRecord(did, rkey) {
+    const query = new URLSearchParams({
+      repo: did,
+      collection: "app.bsky.feed.threadgate",
+      rkey,
+    });
+    const response = await fetch(`${API_BASE}/com.atproto.repo.getRecord?${query.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (response.status === 400 || response.status === 404) return null;
+    if (!response.ok) throw new Error(`Threadgate request failed: ${response.status}`);
+
+    const result = await response.json();
+    if (!result || !result.value) return null;
+    return result.value;
+  }
+
+  /** Liest ausschließlich die DID des lokal ausgewählten Bluesky-Kontos. Keine Parameter. @returns {string} DID des Kontos oder leerer String, wenn keine lesbare Sitzung vorliegt. */
+  function getCurrentAccountDid() {
+    try {
+      const raw = localStorage.getItem("BSKY_STORAGE");
+      if (!raw) return "";
+      const session = JSON.parse(raw)?.session;
+      const current = session?.currentAccount;
+      if (!current || typeof current.did !== "string") return "";
+      if (!current.did.startsWith("did:")) return "";
+      return current.did;
+    } catch {
+      return "";
+    }
+  }
+
+  /** Prüft, ob die eingeloggte DID in den Erwähnungen eines Posts steht. @param {object} record Post-Record mit optionalen Facets. @param {string} viewerDid DID des eingeloggten Kontos. @returns {boolean} Ob das Konto erwähnt wurde. */
+  function postMentionsDid(record, viewerDid) {
+    if (!record || !Array.isArray(record.facets) || !viewerDid) return false;
+
+    for (const facet of record.facets) {
+      if (!facet || !Array.isArray(facet.features)) continue;
+      for (const feature of facet.features) {
+        if (!feature || feature.$type !== "app.bsky.richtext.facet#mention") continue;
+        if (feature.did === viewerDid) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Liest die öffentliche Beziehung zwischen dem eingeloggten Konto und dem Post-Autor. @param {string} viewerDid DID des eingeloggten Kontos. @param {string} authorDid DID des Post-Autors. @returns {Promise<object|null>} Beziehung oder null bei fehlender öffentlicher Antwort. */
+  async function getRelationship(viewerDid, authorDid) {
+    const key = `${viewerDid}:${authorDid}`;
+    if (relationshipCache.has(key)) return relationshipCache.get(key);
+
+    const task = xrpc("app.bsky.graph.getRelationships", {
+      actor: viewerDid,
+      others: authorDid,
+    }).then((result) => {
+      if (!result || !Array.isArray(result.relationships)) return null;
+      for (const relationship of result.relationships) {
+        if (relationship && relationship.did === authorDid) return relationship;
+      }
+      return null;
+    });
+
+    relationshipCache.set(key, task);
+    return task;
+  }
+
+  /** Prüft mit höchstens zehn öffentlichen Listenseiten, ob ein Konto Mitglied einer Antwortliste ist. @param {string} listUri AT-URI der Antwortliste. @param {string} viewerDid DID des eingeloggten Kontos. @returns {Promise<boolean|null>} true bei Mitgliedschaft, false bei vollständiger öffentlicher Liste, null bei unvollständiger Prüfung. */
+  async function isOnReplyList(listUri, viewerDid) {
+    const key = `${listUri}:${viewerDid}`;
+    if (listMembershipCache.has(key)) return listMembershipCache.get(key);
+
+    const task = (async () => {
+      let cursor = "";
+      for (let page = 0; page < 10; page++) {
+        const params = { list: listUri, limit: "100" };
+        if (cursor) params.cursor = cursor;
+        const result = await xrpc("app.bsky.graph.getList", params);
+        if (!result || !Array.isArray(result.items)) return null;
+        for (const item of result.items) {
+          if (item?.subject?.did === viewerDid) return true;
+        }
+        if (typeof result.cursor !== "string" || !result.cursor) return false;
+        cursor = result.cursor;
+      }
+      return null;
+    })();
+
+    listMembershipCache.set(key, task);
+    return task;
+  }
+
+  /** Ermittelt, ob die öffentliche Threadgate-Regel eine Antwort des eingeloggten Kontos zulässt. @param {object|null} threadgate Threadgate-Record oder null. @param {object} record Originaler Post-Record. @param {string} viewerDid DID des eingeloggten Kontos. @param {string} authorDid DID des Post-Autors. @returns {Promise<string>} Verständlicher persönlicher Antwortstatus. */
+  async function getPersonalReplyStatus(threadgate, record, viewerDid, authorDid) {
+    if (!viewerDid) return "Antwort für dich nicht prüfbar: kein eingeloggtes Konto";
+    if (!threadgate || !Array.isArray(threadgate.allow)) return "Du kannst antworten";
+    if (threadgate.allow.length === 0) return "Du kannst nicht antworten: Antworten gesperrt";
+    if (postMentionsDid(record, viewerDid)) {
+      for (const rule of threadgate.allow) {
+        if (rule?.$type === "app.bsky.feed.threadgate#mentionRule") return "Du kannst antworten: Du bist erwähnt";
+      }
+    }
+
+    let relationship;
+    try {
+      relationship = await getRelationship(viewerDid, authorDid);
+    } catch {
+      relationship = null;
+    }
+
+    if (!relationship) return "Antwort für dich nicht eindeutig bestimmbar";
+    if (relationship?.blocking || relationship?.blockedBy || relationship?.blockingByList || relationship?.blockedByList) {
+      return "Du kannst nicht antworten: Blockierung";
+    }
+
+    let hasUnknownRule = false;
+    for (const rule of threadgate.allow) {
+      if (!rule || typeof rule.$type !== "string") {
+        hasUnknownRule = true;
+        continue;
+      }
+      if (rule.$type === "app.bsky.feed.threadgate#followerRule") {
+        if (!relationship) {
+          hasUnknownRule = true;
+          continue;
+        }
+        if (relationship.following) return "Du kannst antworten: Du folgst diesem Konto";
+      }
+      if (rule.$type === "app.bsky.feed.threadgate#followingRule") {
+        if (!relationship) {
+          hasUnknownRule = true;
+          continue;
+        }
+        if (relationship.followedBy) return "Du kannst antworten: Das Konto folgt dir";
+      }
+      if (rule.$type === "app.bsky.feed.threadgate#listRule") {
+        if (typeof rule.list !== "string" || !rule.list) {
+          hasUnknownRule = true;
+          continue;
+        }
+        try {
+          const isMember = await isOnReplyList(rule.list, viewerDid);
+          if (isMember === true) return "Du kannst antworten: Du bist auf der Antwortliste";
+          if (isMember === null) hasUnknownRule = true;
+        } catch {
+          hasUnknownRule = true;
+        }
+      }
+    }
+
+    if (hasUnknownRule) return "Antwort für dich nicht eindeutig bestimmbar";
+    return "Du kannst nicht antworten: Antwortkreis erlaubt dich nicht";
   }
 
   /** Fragt die öffentliche API ab und meldet das Ergebnis. @param {string} method XRPC-Methode. @param {object} params Suchparameter. @returns {Promise<object>} JSON-Antwort; wirft bei Fehlern. */
@@ -107,6 +348,21 @@
         isPost &&
         typeof record.originalText === "string" &&
         typeof record.updatedAt === "string";
+      const pds = await getPdsForDid(did);
+      const usesWsocialPds = isWsocialPds(pds);
+      let replyRestriction = "";
+      let personalReplyStatus = "";
+
+      if (isPost && usesWsocialPds && !record.reply) {
+        try {
+          const threadgate = await getThreadgateRecord(did, parsed.rkey);
+          replyRestriction = getReplyRestriction(threadgate);
+          personalReplyStatus = await getPersonalReplyStatus(threadgate, record, getCurrentAccountDid(), did);
+        } catch (error) {
+          console.debug("Bsky Edit Detector: Threadgate konnte nicht geladen werden.", error);
+          personalReplyStatus = "Antwort für dich derzeit nicht prüfbar";
+        }
+      }
 
       const value = {
         uri: `at://${did}/app.bsky.feed.post/${parsed.rkey}`,
@@ -118,6 +374,11 @@
         originalText: isEdited ? String(record.originalText || "") : "",
         createdAt: isPost ? String(record.createdAt || "") : "",
         updatedAt: isEdited ? String(record.updatedAt || "") : "",
+        pds,
+        usesWsocialPds,
+        usesWsocialHandle: isWsocialHandle(parsed.actor),
+        replyRestriction,
+        personalReplyStatus,
       };
 
       memoryCache.set(cacheKey, { time: Date.now(), value });
@@ -168,6 +429,7 @@
     }).format(date);
   }
 
+  /** Fügt einen anklickbaren Bearbeitungshinweis an einen Post an. @param {Element} container Post-Container. @param {object} info Abgerufene Post-Informationen. @returns {void} */
   function addBadge(container, info) {
     if (!container || container.querySelector(":scope > .bsky-edit-detector-badge")) return;
 
@@ -184,6 +446,54 @@
 
     const target = findInsertionPoint(container) || container;
     target.appendChild(badge);
+  }
+
+  /** Erstellt oder findet das DOM-Template für WSocial- und Antwort-Hinweise. Keine Parameter. @returns {HTMLTemplateElement} Wiederverwendbares Badge-Template. */
+  function getSignalTemplate() {
+    const existing = document.getElementById("bsky-edit-detector-signal-template");
+    if (existing instanceof HTMLTemplateElement) return existing;
+
+    const template = document.createElement("template");
+    template.id = "bsky-edit-detector-signal-template";
+    const badge = document.createElement("span");
+    badge.className = "bsky-edit-detector-signal";
+    badge.setAttribute("role", "status");
+    template.content.appendChild(badge);
+    document.documentElement.appendChild(template);
+    return template;
+  }
+
+  /** Fügt einen einmaligen, nicht anklickbaren Hinweis an einen Post an. @param {Element} container Post-Container. @param {string} key Stabile Kennung gegen doppelte Hinweise. @param {string} text Sichtbarer Hinweistext. @param {string} variant CSS-Variante. @returns {void} */
+  function addSignalBadge(container, key, text, variant) {
+    if (!container) return;
+    if (container.querySelector(`[data-bsky-edit-detector-signal="${key}"]`)) return;
+
+    const badge = getSignalTemplate().content.firstElementChild.cloneNode(true);
+    badge.dataset.bskyEditDetectorSignal = key;
+    badge.classList.add(`bsky-edit-detector-signal--${variant}`);
+    badge.textContent = text;
+
+    const target = findInsertionPoint(container) || container;
+    target.appendChild(badge);
+  }
+
+  /** Markiert WSocial-Hosting und die Antwortbeschränkung eines Originalposts. @param {Element} container Post-Container. @param {object} info Abgerufene Post-Informationen. @returns {void} */
+  function addAccountSignals(container, info) {
+    if (info.usesWsocialPds) {
+      let pdsLabel = "WSocial-PDS";
+      if (info.usesWsocialHandle) pdsLabel = "WSocial-PDS · WSocial-Handle";
+      addSignalBadge(container, "wsocial-pds", pdsLabel, "provider");
+    }
+
+    if (info.replyRestriction) {
+      addSignalBadge(container, "reply-restriction", info.replyRestriction, "restriction");
+    }
+
+    if (info.personalReplyStatus) {
+      let variant = "reply-blocked";
+      if (info.personalReplyStatus.startsWith("Du kannst antworten")) variant = "reply-possible";
+      addSignalBadge(container, "personal-reply-status", info.personalReplyStatus, variant);
+    }
   }
 
   function addErrorMark(container) {
@@ -365,6 +675,7 @@
     try {
       const info = await getPostEditInfo(parsed);
       if (info.isEdited) addBadge(container, info);
+      addAccountSignals(container, info);
     } catch (error) {
       console.debug("Bsky Edit Detector:", error);
       addErrorMark(container);
