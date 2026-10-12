@@ -84,29 +84,25 @@
   opacity: 0.46;
   text-shadow: 0 0 7px rgba(250, 204, 21, 0.8);
   user-select: none;
-  animation: bsky-edit-detector-stardust 7s ease-in-out var(--stardust-delay) infinite alternate;
 }
 
 .bsky-edit-detector-mutual-star::before {
   content: attr(data-glyph);
+  display: inline-block;
+  animation: bsky-edit-detector-stardust var(--stardust-duration) ease-in-out var(--stardust-delay) infinite;
+  will-change: opacity, transform;
 }
 
 @keyframes bsky-edit-detector-stardust {
-  from {
-    opacity: 0.26;
-    transform: scale(0.9) rotate(-5deg) translate3d(0, 0, 0);
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.82) rotate(-14deg) translate3d(0, 0, 0);
   }
 
-  to {
-    opacity: 0.84;
-    transform: scale(1.1) rotate(5deg) translate3d(2px, -3px, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bsky-edit-detector-mutual-star {
-    animation: none;
-    opacity: 0.68;
+  50% {
+    opacity: 0.94;
+    transform: scale(1.18) rotate(14deg) translate3d(2px, -3px, 0);
   }
 }
 

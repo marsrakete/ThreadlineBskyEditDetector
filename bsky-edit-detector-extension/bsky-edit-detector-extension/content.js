@@ -322,11 +322,13 @@
       const star = layer.querySelector(".bsky-edit-detector-mutual-star");
       const horizontal = 3 + Math.round(stardustRandom(seed, index * 2) * 94);
       const vertical = getStardustVerticalPosition(seed, index, stardustSettings.count);
-      const delay = Math.round(stardustRandom(seed, index + 20) * 1400);
+      const duration = 8000 + Math.round(stardustRandom(seed, index + 20) * 6000);
+      const delay = -Math.round(stardustRandom(seed, index + 60) * duration);
       const glyphIndex = Math.floor(stardustRandom(seed, index + 40) * STARDUST_GLYPHS.length);
       star.dataset.glyph = STARDUST_GLYPHS[glyphIndex];
       star.style.setProperty("--stardust-x", `${horizontal}%`);
       star.style.setProperty("--stardust-y", `${vertical}%`);
+      star.style.setProperty("--stardust-duration", `${duration}ms`);
       star.style.setProperty("--stardust-delay", `${delay}ms`);
       container.appendChild(layer);
     }
@@ -554,19 +556,20 @@
     }
   }
 
-  /** Findet den ersten ausreichend hohen Vorfahren eines Post-Links. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Karten-Container mit mindestens 72 Pixel Höhe oder das direkte Eltern-Element. */
-  function findSizedPostContainer(link) {
+  /** Findet den ersten ausreichend hohen Vorfahren eines Post-Links mit mindestens zwei Aktionsschaltflächen. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Einzelne Post-Karte oder das direkte Eltern-Element. */
+  function findInteractivePostContainer(link) {
     let ancestor = link.parentElement;
     while (ancestor && ancestor !== document.body) {
       const bounds = ancestor.getBoundingClientRect();
-      if (bounds.height >= 72) return ancestor;
+      const actionCount = ancestor.querySelectorAll('button, [role="button"]').length;
+      if (bounds.height >= 72 && actionCount >= 2) return ancestor;
       ancestor = ancestor.parentElement;
     }
 
     return link.parentElement;
   }
 
-  /** Findet den vollständigen, sichtbaren Karten-Container eines Post-Links. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Umfassender Post-Container oder ein ausreichend hoher Vorfahr. */
+  /** Findet den vollständigen, sichtbaren Karten-Container eines Post-Links. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Umfassender Post-Container oder eine einzelne interaktive Post-Karte. */
   function findPostContainer(link) {
     const feedItem = link.closest('[data-testid="feedItem"]');
     if (feedItem) return feedItem;
@@ -577,7 +580,7 @@
     const roleArticle = link.closest('[role="article"]');
     if (roleArticle) return roleArticle;
 
-    return findSizedPostContainer(link);
+    return findInteractivePostContainer(link);
   }
 
   function formatDate(value) {
@@ -884,8 +887,15 @@
     processCurrentPostPage();
   }
 
+  /** Entfernt beim Wiederherstellen einer Verlaufsseite alte Dekorationsflächen und startet die Erkennung erneut. Keine Parameter. @returns {void} */
+  function refreshAfterHistoryNavigation() {
+    refreshMutualStardust();
+  }
+
   const observer = new MutationObserver(scheduleScan);
   observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener("pageshow", refreshAfterHistoryNavigation);
+  window.addEventListener("popstate", refreshAfterHistoryNavigation);
 
   const extensionChrome = globalThis.chrome;
   if (extensionChrome?.storage?.onChanged) {
