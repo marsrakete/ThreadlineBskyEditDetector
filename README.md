@@ -26,6 +26,7 @@ Nach einem Update der Erweiterung muss sie auf der Erweiterungsseite neu geladen
 - Hat ein WSocial-Konto für einen eigenen Originalpost Antworten eingeschränkt, erscheint ein auffälliger Hinweis mit dem erlaubten Antwortkreis oder „Antworten gesperrt“.
 - Für das lokal eingeloggte Bluesky-Konto zeigt die Erweiterung, ob eine Antwort laut öffentlicher Threadgate-Regel möglich ist. Sie berücksichtigt Erwähnungen, Folgebeziehungen, öffentliche Antwortlisten und bekannte Blockierungen.
 - Eine sichtbare, geöffnete Anzeige ruft Status- und PDS-Informationen höchstens einmal pro Minute erneut ab.
+- In den Erweiterungseinstellungen lässt sich „Sternenstaub für Mutuals“ ein- oder ausschalten. Bei gegenseitigem Folgen erscheinen dann dezente, nicht klickbare Sterne am Post.
 
 Die Erweiterung unterstützt Postseiten im Format `/profile/<Handle>/post/<Post-ID>` auf folgenden Weboberflächen:
 

@@ -32,7 +32,7 @@ PDS health checks omit cookies and authentication credentials. The extension doe
 
 The extension does not operate a server and does not send collected data to the developer. It does not create a user account, use analytics, use advertising, or sell or share user data.
 
-Post and status results are kept only in the extension's memory for short-lived display and request caching. The extension does not write Bluesky session data, post data, PDS health results, or connection information to persistent extension storage. Removing the extension clears its in-memory data. Browser-granted optional PDS access can be removed in the browser's extension settings.
+Post and status results are kept only in the extension's memory for short-lived display and request caching. The extension does not write Bluesky session data, post data, PDS health results, or connection information to persistent extension storage. It stores only the Mutual stardust on/off preference in Chrome or Edge sync storage. Removing the extension clears its in-memory data; the preference follows the browser's sync-storage behavior. Browser-granted optional PDS access can be removed in the browser's extension settings.
 
 ## Your choices
 

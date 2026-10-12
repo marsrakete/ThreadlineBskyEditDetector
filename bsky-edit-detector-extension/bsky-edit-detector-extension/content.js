@@ -8,6 +8,12 @@
   const SCAN_DELAY_MS = 350;
   const PLC_DIRECTORY_URL = "https://plc.directory";
   const WSOCIAL_PDS_HOSTS = new Set(["pds.wsocial.network"]);
+  const MUTUAL_STARDUST_SETTING = "mutualStardust";
+  const MUTUAL_STARDUST_COUNT_SETTING = "mutualStardustCount";
+  const MIN_MUTUAL_STARDUST_COUNT = 10;
+  const MAX_MUTUAL_STARDUST_COUNT = 50;
+  const DEFAULT_MUTUAL_STARDUST_COUNT = 20;
+  const STARDUST_GLYPHS = ["✦", "✧", "⋆", "❋", "✺", "✨", "·"];
 
   const memoryCache = new Map();
   const pdsCache = new Map();
@@ -18,6 +24,7 @@
   const queue = [];
   let scanTimer = null;
   let activeDialog = null;
+  let mutualStardustSettingsTask = null;
 
   /** Plant einen gebündelten Durchlauf der sichtbaren Post-Links. Keine Parameter. @returns {void} */
 
@@ -201,6 +208,143 @@
 
     relationshipCache.set(key, task);
     return task;
+  }
+
+  /** Begrenzt eine gespeicherte Symbolanzahl auf den erlaubten Bereich. @param {unknown} value Gespeicherter Wert aus den Erweiterungseinstellungen. @returns {number} Ganze Symbolanzahl zwischen 10 und 50. */
+  function normalizeMutualStardustCount(value) {
+    const numericValue = Number(value);
+    if (!Number.isInteger(numericValue)) return DEFAULT_MUTUAL_STARDUST_COUNT;
+    if (numericValue < MIN_MUTUAL_STARDUST_COUNT) return MIN_MUTUAL_STARDUST_COUNT;
+    if (numericValue > MAX_MUTUAL_STARDUST_COUNT) return MAX_MUTUAL_STARDUST_COUNT;
+    return numericValue;
+  }
+
+  /** Liest die gespeicherten Einstellungen für Mutual-Sternenstaub höchstens einmal bis zur nächsten Änderung. Keine Parameter. @returns {Promise<{enabled: boolean, count: number}>} Schalterzustand und Symbolanzahl. */
+  async function getMutualStardustSettings() {
+    if (mutualStardustSettingsTask) return mutualStardustSettingsTask;
+
+    const extensionChrome = globalThis.chrome;
+    if (!extensionChrome || !extensionChrome.storage || !extensionChrome.storage.sync) {
+      return { enabled: false, count: DEFAULT_MUTUAL_STARDUST_COUNT };
+    }
+
+    mutualStardustSettingsTask = extensionChrome.storage.sync.get({
+      [MUTUAL_STARDUST_SETTING]: false,
+      [MUTUAL_STARDUST_COUNT_SETTING]: DEFAULT_MUTUAL_STARDUST_COUNT,
+    })
+      .then((settings) => ({
+        enabled: settings[MUTUAL_STARDUST_SETTING] === true,
+        count: normalizeMutualStardustCount(settings[MUTUAL_STARDUST_COUNT_SETTING]),
+      }))
+      .catch(() => ({ enabled: false, count: DEFAULT_MUTUAL_STARDUST_COUNT }));
+    return mutualStardustSettingsTask;
+  }
+
+  /** Prüft die öffentliche gegenseitige Folgebeziehung zum Post-Autor. @param {string} authorDid DID des Post-Autors. @returns {Promise<boolean>} Ob Autor und lokal eingeloggtes Konto ein Mutual sind. */
+  async function isMutual(authorDid) {
+    const viewerDid = getCurrentAccountDid();
+    if (!viewerDid || viewerDid === authorDid) return false;
+
+    try {
+      const relationship = await getRelationship(viewerDid, authorDid);
+      if (!relationship) return false;
+      if (!relationship.following) return false;
+      if (!relationship.followedBy) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Erzeugt oder findet das Template für einen einzelnen Mutual-Stern. Keine Parameter. @returns {HTMLTemplateElement} Wiederverwendbares Stern-Template. */
+  function getMutualStardustTemplate() {
+    const existing = document.getElementById("bsky-edit-detector-mutual-stardust-template");
+    if (existing instanceof HTMLTemplateElement) return existing;
+
+    const template = document.createElement("template");
+    template.id = "bsky-edit-detector-mutual-stardust-template";
+    const layer = document.createElement("span");
+    layer.className = "bsky-edit-detector-mutual-stardust-layer";
+    const star = document.createElement("span");
+    star.className = "bsky-edit-detector-mutual-star";
+    star.setAttribute("aria-hidden", "true");
+    layer.appendChild(star);
+    template.content.appendChild(layer);
+    document.documentElement.appendChild(template);
+    return template;
+  }
+
+  /** Wandelt einen Text in eine feste positive Zahl für die Sternpositionen um. @param {string} value Post-URI. @returns {number} Positive Ganzzahl. */
+  function stardustSeed(value) {
+    let seed = 0;
+    for (const character of String(value || "")) {
+      seed = (seed * 31 + character.charCodeAt(0)) >>> 0;
+    }
+    return seed;
+  }
+
+  /** Berechnet eine feste, zufällig wirkende Zahl zwischen null und eins. @param {number} seed Ausgangswert. @param {number} step Sternindex. @returns {number} Zahl im Bereich von null bis eins. */
+  function stardustRandom(seed, step) {
+    const value = (seed + step * 2654435761) >>> 0;
+    return (value % 1000) / 1000;
+  }
+
+  /** Berechnet eine gleichmäßig über die Kartenhöhe verteilte Sternposition. @param {number} seed Fester Zufalls-Ausgangswert des Posts. @param {number} index Laufende Nummer des Sterns. @param {number} symbolCount Gesamtzahl der Symbole. @returns {number} Vertikale Position als Prozentwert. */
+  function getStardustVerticalPosition(seed, index, symbolCount) {
+    const bandSize = 88 / symbolCount;
+    const verticalBand = 6 + bandSize * (index + 0.5);
+    const verticalJitter = (stardustRandom(seed, index * 2 + 1) - 0.5) * bandSize * 0.5;
+    return Math.round(verticalBand + verticalJitter);
+  }
+
+  /** Entfernt vorhandenen Mutual-Sternenstaub aus einem Post-Container. @param {Element|null} container Post-Container. @returns {void} */
+  function removeMutualStardust(container) {
+    if (!container) return;
+    for (const layer of container.querySelectorAll(".bsky-edit-detector-mutual-stardust-layer")) {
+      layer.remove();
+    }
+    container.classList.remove("bsky-edit-detector-has-mutual-stardust");
+  }
+
+  /** Rendert sanften Sternenstaub ausschließlich an Posts von Mutuals. @param {Element|null} container Post-Container. @param {string} authorDid DID des Post-Autors. @param {string} postUri AT-URI des Posts. @returns {Promise<void>} Abschluss der Bewertung und Darstellung. */
+  async function renderMutualStardust(container, authorDid, postUri) {
+    removeMutualStardust(container);
+    if (!container) return;
+    const stardustSettings = await getMutualStardustSettings();
+    if (!stardustSettings.enabled) return;
+    if (!(await isMutual(authorDid))) return;
+
+    const seed = stardustSeed(postUri);
+    const template = getMutualStardustTemplate();
+    container.classList.add("bsky-edit-detector-has-mutual-stardust");
+    for (let index = 0; index < stardustSettings.count; index++) {
+      const layer = template.content.firstElementChild.cloneNode(true);
+      const star = layer.querySelector(".bsky-edit-detector-mutual-star");
+      const horizontal = 3 + Math.round(stardustRandom(seed, index * 2) * 94);
+      const vertical = getStardustVerticalPosition(seed, index, stardustSettings.count);
+      const delay = Math.round(stardustRandom(seed, index + 20) * 1400);
+      const glyphIndex = Math.floor(stardustRandom(seed, index + 40) * STARDUST_GLYPHS.length);
+      star.dataset.glyph = STARDUST_GLYPHS[glyphIndex];
+      star.style.setProperty("--stardust-x", `${horizontal}%`);
+      star.style.setProperty("--stardust-y", `${vertical}%`);
+      star.style.setProperty("--stardust-delay", `${delay}ms`);
+      container.appendChild(layer);
+    }
+  }
+
+  /** Reagiert auf eine geänderte Sternenstaub-Einstellung und plant einen neuen Seitendurchlauf. Keine Parameter. @returns {void} */
+  function refreshMutualStardust() {
+    mutualStardustSettingsTask = null;
+    for (const container of document.querySelectorAll("[data-bsky-edit-detector-current-post]")) {
+      delete container.dataset.bskyEditDetectorCurrentPost;
+    }
+    for (const link of document.querySelectorAll('a[href*="/profile/"][href*="/post/"]')) {
+      delete link.dataset.bskyEditDetectorChecked;
+    }
+    for (const container of document.querySelectorAll(".bsky-edit-detector-has-mutual-stardust")) {
+      removeMutualStardust(container);
+    }
+    scheduleScan();
   }
 
   /** Prüft mit höchstens zehn öffentlichen Listenseiten, ob ein Konto Mitglied einer Antwortliste ist. @param {string} listUri AT-URI der Antwortliste. @param {string} viewerDid DID des eingeloggten Kontos. @returns {Promise<boolean|null>} true bei Mitgliedschaft, false bei vollständiger öffentlicher Liste, null bei unvollständiger Prüfung. */
@@ -410,13 +554,30 @@
     }
   }
 
+  /** Findet den ersten ausreichend hohen Vorfahren eines Post-Links. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Karten-Container mit mindestens 72 Pixel Höhe oder das direkte Eltern-Element. */
+  function findSizedPostContainer(link) {
+    let ancestor = link.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      const bounds = ancestor.getBoundingClientRect();
+      if (bounds.height >= 72) return ancestor;
+      ancestor = ancestor.parentElement;
+    }
+
+    return link.parentElement;
+  }
+
+  /** Findet den vollständigen, sichtbaren Karten-Container eines Post-Links. @param {HTMLAnchorElement} link Post-Link aus Bluesky oder einer kompatiblen Oberfläche. @returns {Element|null} Umfassender Post-Container oder ein ausreichend hoher Vorfahr. */
   function findPostContainer(link) {
-    return (
-      link.closest('[data-testid="feedItem"]') ||
-      link.closest('article') ||
-      link.closest('[role="article"]') ||
-      link.parentElement
-    );
+    const feedItem = link.closest('[data-testid="feedItem"]');
+    if (feedItem) return feedItem;
+
+    const article = link.closest('article');
+    if (article) return article;
+
+    const roleArticle = link.closest('[role="article"]');
+    if (roleArticle) return roleArticle;
+
+    return findSizedPostContainer(link);
   }
 
   function formatDate(value) {
@@ -664,6 +825,20 @@
     return escapeHtml(value).replace(/'/g, "&#39;");
   }
 
+  /** Lädt die Post-Informationen und fügt Bearbeitungs- sowie Kontohinweise ein. @param {object} parsed Aufgelöste Post-URL. @param {Element|null} container Zugehöriger Post-Container. @returns {Promise<void>} Abschluss der Verarbeitung. */
+  async function processPost(parsed, container) {
+    try {
+      const info = await getPostEditInfo(parsed);
+      if (info.isEdited) addBadge(container, info);
+      addAccountSignals(container, info);
+      await renderMutualStardust(container, info.actorDid, info.uri);
+    } catch (error) {
+      console.debug("Bsky Edit Detector:", error);
+      addErrorMark(container);
+    }
+  }
+
+  /** Verarbeitet einen Post-Link in einer Übersicht höchstens einmal. @param {HTMLAnchorElement} link Post-Link aus der Seite. @returns {Promise<void>} Abschluss der Verarbeitung. */
   async function processLink(link) {
     if (link.dataset.bskyEditDetectorChecked === "1") return;
     const parsed = parsePostUrl(link.href);
@@ -671,24 +846,57 @@
 
     link.dataset.bskyEditDetectorChecked = "1";
     const container = findPostContainer(link);
-
-    try {
-      const info = await getPostEditInfo(parsed);
-      if (info.isEdited) addBadge(container, info);
-      addAccountSignals(container, info);
-    } catch (error) {
-      console.debug("Bsky Edit Detector:", error);
-      addErrorMark(container);
-    }
+    await processPost(parsed, container);
   }
 
+  /** Findet auf einer einzelnen Postseite zuerst den Container des aktuellen Posts. @param {object} parsed Aufgelöste URL des geöffneten Posts. @returns {Element|null} Passender Container oder null, solange die Seite noch lädt. */
+  function findCurrentPostContainer(parsed) {
+    const links = document.querySelectorAll('a[href*="/profile/"][href*="/post/"]');
+    for (const link of links) {
+      const candidate = parsePostUrl(link.href);
+      if (!candidate) continue;
+      if (candidate.actor === parsed.actor && candidate.rkey === parsed.rkey) {
+        return findPostContainer(link);
+      }
+    }
+
+    return document.querySelector('[data-testid="feedItem"], article, [role="article"]');
+  }
+
+  /** Verarbeitet den in der Adressleiste geöffneten Post, auch ohne Feed-Link. Keine Parameter. @returns {void} */
+  function processCurrentPostPage() {
+    const parsed = parsePostUrl(location.href);
+    if (!parsed) return;
+
+    const container = findCurrentPostContainer(parsed);
+    if (!container) return;
+    const key = `${parsed.actor}/${parsed.rkey}`;
+    if (container.dataset.bskyEditDetectorCurrentPost === key) return;
+
+    container.dataset.bskyEditDetectorCurrentPost = key;
+    void processPost(parsed, container);
+  }
+
+  /** Durchsucht Feed-Links und verarbeitet zusätzlich den direkt geöffneten Post. Keine Parameter. @returns {void} */
   function scanPage() {
     const links = Array.from(document.querySelectorAll('a[href*="/profile/"][href*="/post/"]'));
     for (const link of links) processLink(link);
+    processCurrentPostPage();
   }
 
   const observer = new MutationObserver(scheduleScan);
   observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  const extensionChrome = globalThis.chrome;
+  if (extensionChrome?.storage?.onChanged) {
+    extensionChrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== "sync") return;
+      const hasEnabledChange = Boolean(changes[MUTUAL_STARDUST_SETTING]);
+      const hasCountChange = Boolean(changes[MUTUAL_STARDUST_COUNT_SETTING]);
+      if (!hasEnabledChange && !hasCountChange) return;
+      refreshMutualStardust();
+    });
+  }
 
   scanPage();
 })();

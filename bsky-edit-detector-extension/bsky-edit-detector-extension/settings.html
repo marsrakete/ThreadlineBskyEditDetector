@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Threadline Einstellungen</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <template id="threadline-settings-template">
+    <main class="threadline-settings">
+      <h1>Threadline Einstellungen</h1>
+      <section aria-labelledby="mutual-stardust-heading">
+        <h2 id="mutual-stardust-heading">Mutual-Sternenstaub</h2>
+        <label class="threadline-settings-toggle" for="mutual-stardust-toggle">
+          <img class="threadline-settings-wand" src="icons/magic-wand.svg" alt="">
+          <span class="threadline-settings-copy">
+            <span>Sternenstaub für Mutuals</span>
+            <small>Zeigt bei gegenseitigem Folgen eine dezente Animation am Post.</small>
+          </span>
+          <input id="mutual-stardust-toggle" type="checkbox" role="switch">
+        </label>
+        <div class="threadline-settings-slider">
+          <label for="mutual-stardust-count">Symbole pro Mutual-Posting <output id="mutual-stardust-count-value" for="mutual-stardust-count">20</output></label>
+          <input id="mutual-stardust-count" type="range" min="10" max="50" step="1" value="20">
+          <small>Verteilt die gewählte Menge zufällig über die gesamte Post-Karte.</small>
+        </div>
+        <p class="threadline-settings-status" aria-live="polite"></p>
+      </section>
+    </main>
+  </template>
+  <script src="settings.js"></script>
+</body>
+</html>

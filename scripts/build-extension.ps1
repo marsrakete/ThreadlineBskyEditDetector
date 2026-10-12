@@ -39,7 +39,8 @@ function Invoke-ExtensionChecks {
     (Join-Path $extensionPath "server-status.js"),
     (Join-Path $extensionPath "connection.js"),
     (Join-Path $extensionPath "content.js"),
-    (Join-Path $extensionPath "permission.js")
+    (Join-Path $extensionPath "permission.js"),
+    (Join-Path $extensionPath "settings.js")
   )
   foreach ($scriptPath in $scriptPaths) {
     & node --check $scriptPath
