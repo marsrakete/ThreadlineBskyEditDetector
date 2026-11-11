@@ -4,6 +4,7 @@
   const API_BASE = "https://public.api.bsky.app/xrpc";
   const POST_PATH_RE = /^\/profile\/([^/]+)\/post\/([^/?#]+)/;
   const POST_LINK_SELECTOR = 'a[href*="/profile/"][href*="/post/"]:not(.bsky-edit-detector-overlay *)';
+  const NOTIFICATION_REPLY_SELECTOR = '[data-testid^="notification-reply-"]';
   const CACHE_TTL_MS = 10 * 60 * 1000;
   const MAX_PARALLEL = 4;
   const SCAN_DELAY_MS = 350;
@@ -511,16 +512,24 @@
     }
   }
 
-  async function getPostEditInfo(parsed) {
+  async function getPostEditInfo(parsed, onActorDidResolved = null) {
     const cacheKey = `${parsed.actor}/${parsed.rkey}`;
     const cached = memoryCache.get(cacheKey);
-    if (cached && Date.now() - cached.time < CACHE_TTL_MS) return cached.value;
+    if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
+      onActorDidResolved?.(cached.value.actorDid);
+      return cached.value;
+    }
 
-    if (pending.has(cacheKey)) return pending.get(cacheKey);
+    if (pending.has(cacheKey)) {
+      const value = await pending.get(cacheKey);
+      onActorDidResolved?.(value.actorDid);
+      return value;
+    }
 
     const task = enqueue(async () => {
       const did = await resolveHandleToDid(parsed.actor);
       if (!did) throw new Error("Could not resolve actor DID");
+      onActorDidResolved?.(did);
 
       const recordResponse = await xrpc("com.atproto.repo.getRecord", {
         repo: did,
@@ -1084,14 +1093,23 @@
   /** Lädt die Post-Informationen und fügt Bearbeitungs- sowie Kontohinweise ein. @param {object} parsed Aufgelöste Post-URL. @param {Element|null} container Zugehöriger Post-Container. @returns {Promise<void>} Abschluss der Verarbeitung. */
   async function processPost(parsed, container) {
     addThreadDataButton(container, parsed);
+    let stardustTask = null;
+    const startStardust = (actorDid) => {
+      if (stardustTask || !actorDid) return;
+      stardustTask = renderMutualStardust(container, actorDid, `at://${actorDid}/app.bsky.feed.post/${parsed.rkey}`)
+        .catch((error) => console.debug("Bsky Edit Detector: Mehr Spaß konnte nicht angezeigt werden.", error));
+    };
+
     try {
-      const info = await getPostEditInfo(parsed);
+      const info = await getPostEditInfo(parsed, startStardust);
       if (info.isEdited) addBadge(container, info);
       addAccountSignals(container, info);
-      await renderMutualStardust(container, info.actorDid, info.uri);
+      startStardust(info.actorDid);
     } catch (error) {
       console.debug("Bsky Edit Detector:", error);
       addErrorMark(container);
+    } finally {
+      if (stardustTask) await stardustTask;
     }
   }
 
@@ -1104,6 +1122,24 @@
     link.dataset.bskyEditDetectorChecked = "1";
     const container = findPostContainer(link);
     await processPost(parsed, container);
+  }
+
+  /** Dekoriert Antwort-Mitteilungen, deren Postkarte keinen Post-Permalink enthält. @param {Element} card Notification-Karte mit data-testid notification-reply-*. @returns {Promise<void>} Abschluss der Beziehungsprüfung und Darstellung. */
+  async function processNotificationReply(card) {
+    if (card.dataset.bskyEditDetectorNotificationChecked === "1") return;
+
+    const authorLink = card.querySelector('a[href^="/profile/"]');
+    if (!authorLink) return;
+    const match = new URL(authorLink.href, location.origin).pathname.match(/^\/profile\/([^/]+)\/?$/);
+    if (!match) return;
+
+    card.dataset.bskyEditDetectorNotificationChecked = "1";
+    try {
+      const authorDid = await resolveHandleToDid(decodeURIComponent(match[1]));
+      if (authorDid) await renderMutualStardust(card, authorDid, "");
+    } catch (error) {
+      console.debug("Bsky Edit Detector: Stardust in einer Antwort-Mitteilung konnte nicht angezeigt werden.", error);
+    }
   }
 
   /** Findet auf einer einzelnen Postseite zuerst den Container des aktuellen Posts. @param {object} parsed Aufgelöste URL des geöffneten Posts. @returns {Element|null} Passender Container oder null, solange die Seite noch lädt. */
@@ -1138,6 +1174,9 @@
   function scanPage() {
     const links = document.querySelectorAll(POST_LINK_SELECTOR);
     for (const link of links) processLink(link);
+    for (const card of document.querySelectorAll(NOTIFICATION_REPLY_SELECTOR)) {
+      void processNotificationReply(card);
+    }
     processCurrentPostPage();
   }
 
