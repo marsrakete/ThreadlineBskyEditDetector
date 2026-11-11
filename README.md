@@ -18,7 +18,8 @@ Nach einem Update der Erweiterung muss sie auf der Erweiterungsseite neu geladen
 
 ## Was die Erweiterung macht
 
-- Sie erkennt bei Posts, deren öffentliche Daten die Felder `originalText` und `updatedAt` enthalten, dass sie bearbeitet wurden. Die ursprüngliche und die aktuelle Fassung lassen sich vergleichen.
+- Sie erkennt Bearbeitungen anhand von `originalText` und `updatedAt` oder wenn eine sichtbare direkte Antwort dieselbe Post-URI mit einer anderen CID referenziert. Sind die Bearbeitungsfelder vorhanden, lassen sich die ursprüngliche und die aktuelle Textfassung vergleichen.
+- „Thread-Daten“ zeigt pro Post die aktuelle Record-CID und die Parent- und Root-Referenzen der öffentlich sichtbaren direkten Antworten. Ein Mermaid-Diagramm ordnet die Antworten den referenzierten Fassungen zu. Der Button ist standardmäßig sichtbar und lässt sich in den Erweiterungseinstellungen ausblenden.
 - Unten rechts befindet sich die auf- und zuklappbare Anzeige „Threadline · Verbindung“. Sie zeigt den Netzwerkstatus des Browsers, das gewählte Konto, Handle und DID sowie den gespeicherten PDS und Anmeldedienst.
 - Die Anzeige informiert über den letzten Abruf der öffentlichen Bluesky-API und über den allgemeinen Status von [status.bsky.app](https://status.bsky.app/).
 - Sie prüft den gespeicherten PDS direkt über den festen Endpunkt `/xrpc/_health`. Angezeigt werden Erreichbarkeit, Antwortzeit, Serverversion und gegebenenfalls ein HTTP-, Netzwerk- oder Timeout-Fehler.
@@ -26,12 +27,13 @@ Nach einem Update der Erweiterung muss sie auf der Erweiterungsseite neu geladen
 - Hat ein WSocial-Konto für einen eigenen Originalpost Antworten eingeschränkt, erscheint ein auffälliger Hinweis mit dem erlaubten Antwortkreis oder „Antworten gesperrt“.
 - Für das lokal eingeloggte Bluesky-Konto zeigt die Erweiterung, ob eine Antwort laut öffentlicher Threadgate-Regel möglich ist. Sie berücksichtigt Erwähnungen, Folgebeziehungen, öffentliche Antwortlisten und bekannte Blockierungen.
 - Eine sichtbare, geöffnete Anzeige ruft Status- und PDS-Informationen höchstens einmal pro Minute erneut ab.
-- In den Erweiterungseinstellungen lässt sich „Sternenstaub für Mutuals“ ein- oder ausschalten. Bei gegenseitigem Folgen erscheinen dann dezente, nicht klickbare Sterne am Post.
+- Unter „Mehr Spaß“ lassen sich Mutual-Animationen aktivieren, ein Thema aus zehn Motiven wählen und die Symbolanzahl festlegen. Die Symbole erscheinen nur bei gegenseitigem Folgen.
 
 Die Erweiterung unterstützt Postseiten im Format `/profile/<Handle>/post/<Post-ID>` auf folgenden Weboberflächen:
 
 - `bsky.app`
 - `mu.social` und deren Subdomains
+- `cope.works`
 - `blacksky.app` und deren Subdomains
 - `portal.eurosky.tech`
 - `eurosky.social` und deren Subdomains

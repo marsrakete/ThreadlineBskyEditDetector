@@ -3,17 +3,31 @@
 
   const API_BASE = "https://public.api.bsky.app/xrpc";
   const POST_PATH_RE = /^\/profile\/([^/]+)\/post\/([^/?#]+)/;
+  const POST_LINK_SELECTOR = 'a[href*="/profile/"][href*="/post/"]:not(.bsky-edit-detector-overlay *)';
   const CACHE_TTL_MS = 10 * 60 * 1000;
   const MAX_PARALLEL = 4;
   const SCAN_DELAY_MS = 350;
   const PLC_DIRECTORY_URL = "https://plc.directory";
   const WSOCIAL_PDS_HOSTS = new Set(["pds.wsocial.network"]);
   const MUTUAL_STARDUST_SETTING = "mutualStardust";
+  const MUTUAL_STARDUST_THEME_SETTING = "mutualStardustTheme";
+  const THREAD_DATA_BUTTON_SETTING = "showThreadDataButton";
   const MUTUAL_STARDUST_COUNT_SETTING = "mutualStardustCount";
   const MIN_MUTUAL_STARDUST_COUNT = 10;
   const MAX_MUTUAL_STARDUST_COUNT = 50;
   const DEFAULT_MUTUAL_STARDUST_COUNT = 20;
-  const STARDUST_GLYPHS = ["✦", "✧", "⋆", "❋", "✺", "✨", "·"];
+  const STARDUST_THEMES = {
+    stardust: { glyphs: ["✦", "✧", "⋆", "❋", "✺", "✨", "·"], color: "202, 138, 4" },
+    space: { glyphs: ["🪐", "🌙", "☄️", "🚀", "🛸", "🌌", "⭐"], color: "124, 92, 220" },
+    carnival: { glyphs: ["🎭", "🎉", "🎊", "🎈", "🥳", "🪅", "✨"], color: "219, 39, 119" },
+    birthday: { glyphs: ["🎂", "🧁", "🎈", "🎉", "🎁", "🍰", "✨"], color: "236, 72, 153" },
+    flowers: { glyphs: ["🌸", "🌼", "🌻", "🌷", "🦋", "🌿", "✨"], color: "219, 39, 119" },
+    ocean: { glyphs: ["🐠", "🐚", "🫧", "🐬", "🪸", "🌊", "✨"], color: "8, 145, 178" },
+    forest: { glyphs: ["🍃", "🍂", "🍄", "🌿", "🌱", "🦋", "✨"], color: "22, 120, 76" },
+    disco: { glyphs: ["🪩", "💃", "🕺", "🎶", "🌈", "✨", "🎵"], color: "147, 51, 234" },
+    halloween: { glyphs: ["🎃", "👻", "🦇", "🕸️", "🕷️", "🌙", "✨"], color: "234, 88, 12" },
+    winter: { glyphs: ["❄️", "☃️", "⛄", "🧊", "🌨️", "⭐", "✨"], color: "37, 99, 235" },
+  };
 
   const memoryCache = new Map();
   const pdsCache = new Map();
@@ -56,6 +70,7 @@
   function isSupportedPostHost(hostname) {
     const host = hostname.toLowerCase();
     if (host === "bsky.app") return true;
+    if (host === "cope.works") return true;
     if (host === "mu.social" || host.endsWith(".mu.social")) return true;
     if (host === "blacksky.app" || host.endsWith(".blacksky.app")) return true;
     if (host === "portal.eurosky.tech") return true;
@@ -230,13 +245,17 @@
 
     mutualStardustSettingsTask = extensionChrome.storage.sync.get({
       [MUTUAL_STARDUST_SETTING]: false,
+      [MUTUAL_STARDUST_THEME_SETTING]: "stardust",
       [MUTUAL_STARDUST_COUNT_SETTING]: DEFAULT_MUTUAL_STARDUST_COUNT,
     })
       .then((settings) => ({
         enabled: settings[MUTUAL_STARDUST_SETTING] === true,
+        theme: Object.hasOwn(STARDUST_THEMES, settings[MUTUAL_STARDUST_THEME_SETTING])
+          ? settings[MUTUAL_STARDUST_THEME_SETTING]
+          : "stardust",
         count: normalizeMutualStardustCount(settings[MUTUAL_STARDUST_COUNT_SETTING]),
       }))
-      .catch(() => ({ enabled: false, count: DEFAULT_MUTUAL_STARDUST_COUNT }));
+      .catch(() => ({ enabled: false, theme: "stardust", count: DEFAULT_MUTUAL_STARDUST_COUNT }));
     return mutualStardustSettingsTask;
   }
 
@@ -274,27 +293,9 @@
     return template;
   }
 
-  /** Wandelt einen Text in eine feste positive Zahl für die Sternpositionen um. @param {string} value Post-URI. @returns {number} Positive Ganzzahl. */
-  function stardustSeed(value) {
-    let seed = 0;
-    for (const character of String(value || "")) {
-      seed = (seed * 31 + character.charCodeAt(0)) >>> 0;
-    }
-    return seed;
-  }
-
-  /** Berechnet eine feste, zufällig wirkende Zahl zwischen null und eins. @param {number} seed Ausgangswert. @param {number} step Sternindex. @returns {number} Zahl im Bereich von null bis eins. */
-  function stardustRandom(seed, step) {
-    const value = (seed + step * 2654435761) >>> 0;
-    return (value % 1000) / 1000;
-  }
-
-  /** Berechnet eine gleichmäßig über die Kartenhöhe verteilte Sternposition. @param {number} seed Fester Zufalls-Ausgangswert des Posts. @param {number} index Laufende Nummer des Sterns. @param {number} symbolCount Gesamtzahl der Symbole. @returns {number} Vertikale Position als Prozentwert. */
-  function getStardustVerticalPosition(seed, index, symbolCount) {
-    const bandSize = 88 / symbolCount;
-    const verticalBand = 6 + bandSize * (index + 0.5);
-    const verticalJitter = (stardustRandom(seed, index * 2 + 1) - 0.5) * bandSize * 0.5;
-    return Math.round(verticalBand + verticalJitter);
+  /** Liefert einen neuen kryptografischen Zufallswert zwischen null und eins. @returns {number} Zufallswert. */
+  function randomStardustValue() {
+    return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
   }
 
   /** Entfernt vorhandenen Mutual-Sternenstaub aus einem Post-Container. @param {Element|null} container Post-Container. @returns {void} */
@@ -314,20 +315,29 @@
     if (!stardustSettings.enabled) return;
     if (!(await isMutual(authorDid))) return;
 
-    const seed = stardustSeed(postUri);
+    const theme = STARDUST_THEMES[stardustSettings.theme] || STARDUST_THEMES.stardust;
+    const glyphs = Array.from({ length: stardustSettings.count }, () =>
+      theme.glyphs[Math.floor(randomStardustValue() * theme.glyphs.length)]);
+    for (let index = glyphs.length - 1; index > 0; index--) {
+      const swapIndex = Math.floor(randomStardustValue() * (index + 1));
+      [glyphs[index], glyphs[swapIndex]] = [glyphs[swapIndex], glyphs[index]];
+    }
     const template = getMutualStardustTemplate();
     container.classList.add("bsky-edit-detector-has-mutual-stardust");
     for (let index = 0; index < stardustSettings.count; index++) {
       const layer = template.content.firstElementChild.cloneNode(true);
       const star = layer.querySelector(".bsky-edit-detector-mutual-star");
-      const horizontal = 3 + Math.round(stardustRandom(seed, index * 2) * 94);
-      const vertical = getStardustVerticalPosition(seed, index, stardustSettings.count);
-      const duration = 8000 + Math.round(stardustRandom(seed, index + 20) * 6000);
-      const delay = -Math.round(stardustRandom(seed, index + 60) * duration);
-      const glyphIndex = Math.floor(stardustRandom(seed, index + 40) * STARDUST_GLYPHS.length);
-      star.dataset.glyph = STARDUST_GLYPHS[glyphIndex];
+      const horizontal = 3 + Math.round(randomStardustValue() * 94);
+      const vertical = 5 + Math.round(randomStardustValue() * 90);
+      const duration = 5000 + Math.round(randomStardustValue() * 14000);
+      const delay = -Math.round(randomStardustValue() * duration);
+      const size = 12 + Math.round(randomStardustValue() * 13);
+      star.dataset.glyph = glyphs[index];
+      star.style.setProperty("--stardust-color", theme.color);
       star.style.setProperty("--stardust-x", `${horizontal}%`);
       star.style.setProperty("--stardust-y", `${vertical}%`);
+      star.style.setProperty("--stardust-size", `${size}px`);
+      star.style.setProperty("--stardust-rotation", `${Math.round(randomStardustValue() * 70 - 35)}deg`);
       star.style.setProperty("--stardust-duration", `${duration}ms`);
       star.style.setProperty("--stardust-delay", `${delay}ms`);
       container.appendChild(layer);
@@ -437,13 +447,14 @@
   }
 
   /** Fragt die öffentliche API ab und meldet das Ergebnis. @param {string} method XRPC-Methode. @param {object} params Suchparameter. @returns {Promise<object>} JSON-Antwort; wirft bei Fehlern. */
-  async function xrpc(method, params) {
+  async function xrpc(method, params, signal) {
     const qs = new URLSearchParams(params);
     let response;
     try {
       response = await fetch(`${API_BASE}/${method}?${qs.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
+        signal,
       });
     } catch (error) {
       BskyEditDetectorConnection.reportRequest(method, "Netzwerkfehler");
@@ -471,6 +482,35 @@
     return data?.did || null;
   }
 
+  async function getPostThread(uri) {
+    const { thread } = await xrpc("app.bsky.feed.getPostThread", {
+      uri,
+      depth: 1,
+      parentHeight: 0,
+    }, AbortSignal.timeout(5000));
+    return thread;
+  }
+
+  /** Prüft direkte Antworten auf eine frühere Record-Fassung desselben Posts. */
+  async function hasDifferentReplyCid(uri, cid) {
+    if (!cid) return false;
+
+    try {
+      const thread = await getPostThread(uri);
+      if (thread?.post?.uri !== uri || thread.post.cid !== cid || !Array.isArray(thread.replies)) {
+        return false;
+      }
+
+      return thread.replies.some(({ post }) => {
+        const parent = post?.record?.reply?.parent;
+        return parent?.uri === uri && typeof parent.cid === "string" && parent.cid !== "" && parent.cid !== cid;
+      });
+    } catch (error) {
+      console.debug("Bsky Edit Detector: Antwortreferenzen konnten nicht geladen werden.", error);
+      return false;
+    }
+  }
+
   async function getPostEditInfo(parsed) {
     const cacheKey = `${parsed.actor}/${parsed.rkey}`;
     const cached = memoryCache.get(cacheKey);
@@ -490,10 +530,13 @@
 
       const record = recordResponse?.value;
       const isPost = record?.$type === "app.bsky.feed.post";
-      const isEdited =
+      const hasEditMetadata =
         isPost &&
         typeof record.originalText === "string" &&
         typeof record.updatedAt === "string";
+      const uri = `at://${did}/app.bsky.feed.post/${parsed.rkey}`;
+      const cid = String(recordResponse?.cid || "");
+      const isEdited = hasEditMetadata || (isPost && await hasDifferentReplyCid(uri, cid));
       const pds = await getPdsForDid(did);
       const usesWsocialPds = isWsocialPds(pds);
       let replyRestriction = "";
@@ -511,15 +554,15 @@
       }
 
       const value = {
-        uri: `at://${did}/app.bsky.feed.post/${parsed.rkey}`,
-        cid: String(recordResponse?.cid || ""),
+        uri,
+        cid,
         actorDid: did,
         sourceUrl: parsed.sourceUrl,
         isEdited,
         text: isPost ? String(record.text || "") : "",
-        originalText: isEdited ? String(record.originalText || "") : "",
+        originalText: hasEditMetadata ? record.originalText : null,
         createdAt: isPost ? String(record.createdAt || "") : "",
-        updatedAt: isEdited ? String(record.updatedAt || "") : "",
+        updatedAt: hasEditMetadata ? record.updatedAt : "",
         pds,
         usesWsocialPds,
         usesWsocialHandle: isWsocialHandle(parsed.actor),
@@ -759,15 +802,17 @@
     dialog.setAttribute("aria-modal", "true");
     dialog.setAttribute("aria-label", "Bearbeitungs-Details");
 
-    const diff = diffTokens(info.originalText, info.text);
+    const diff = info.originalText === null ? null : diffTokens(info.originalText, info.text);
 
     dialog.innerHTML = `
       <button type="button" class="bsky-edit-detector-close" aria-label="Schließen">×</button>
       <h2>Bearbeitungs-Details</h2>
-      <p class="bsky-edit-detector-muted">Dieser Post enthält eine Bearbeitung, die von Mu dokumentiert wurde.</p>
+      <p class="bsky-edit-detector-muted">${diff
+        ? "Dieser Post enthält eine Bearbeitung, die von Mu dokumentiert wurde."
+        : "Eine Antwort verweist auf eine andere Fassung dieses Posts. Der genaue Bearbeitungszeitpunkt ist unbekannt."}</p>
       <div class="bsky-edit-detector-meta">
         <div><span>Erstellt:</span> <strong>${escapeHtml(formatDate(info.createdAt))}</strong></div>
-        <div><span>Geändert:</span> <strong>${escapeHtml(formatDate(info.updatedAt))}</strong></div>
+        ${diff ? `<div><span>Geändert:</span> <strong>${escapeHtml(formatDate(info.updatedAt))}</strong></div>` : ""}
       </div>
       <div class="bsky-edit-detector-url">
         <strong>Post-URL</strong>
@@ -783,19 +828,26 @@
           <div class="bsky-edit-detector-text" data-side="new"></div>
         </div>
       </div>
-      <div class="bsky-edit-detector-legend">
+      ${diff ? `<div class="bsky-edit-detector-legend">
         <span><i class="bsky-edit-detector-added"></i> Hinzugefügt</span>
         <span><i class="bsky-edit-detector-removed"></i> Entfernt</span>
       </div>
-      <p class="bsky-edit-detector-note">Hinweis: Änderungen werden von Mu (mu.social) im ATProto-Record als <code>originalText</code> und <code>updatedAt</code> gespeichert.</p>
+      <p class="bsky-edit-detector-note">Hinweis: Änderungen werden von Mu (mu.social) im ATProto-Record als <code>originalText</code> und <code>updatedAt</code> gespeichert.</p>` : ""}
       <div class="bsky-edit-detector-actions"><button type="button">Schließen</button></div>
     `;
 
     overlay.appendChild(dialog);
     document.documentElement.appendChild(overlay);
 
-    renderDiff(dialog.querySelector('[data-side="old"]'), diff.oldParts);
-    renderDiff(dialog.querySelector('[data-side="new"]'), diff.newParts);
+    const oldText = dialog.querySelector('[data-side="old"]');
+    const newText = dialog.querySelector('[data-side="new"]');
+    if (diff) {
+      renderDiff(oldText, diff.oldParts);
+      renderDiff(newText, diff.newParts);
+    } else {
+      oldText.textContent = "Frühere Fassung nicht verfügbar.";
+      newText.textContent = info.text;
+    }
 
     dialog.querySelector(".bsky-edit-detector-close").addEventListener("click", closeEditDialog);
     dialog.querySelector(".bsky-edit-detector-actions button").addEventListener("click", closeEditDialog);
@@ -828,8 +880,210 @@
     return escapeHtml(value).replace(/'/g, "&#39;");
   }
 
+  function addThreadDataButton(container, parsed) {
+    if (!container || container.querySelector(".bsky-edit-detector-thread-button")) return;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "bsky-edit-detector-thread-button";
+    button.textContent = "Thread-Daten";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void showThreadData(parsed);
+    });
+    findInsertionPoint(container).appendChild(button);
+  }
+
+  function renderThreadData(thread, record, uri) {
+    const post = thread?.post;
+    if (post?.uri !== uri) throw new Error("Post fehlt in der Thread-Antwort.");
+
+    function referenceCell(reference) {
+      if (!reference?.uri || !reference.cid) return "<td>—</td>";
+      let comparison = "";
+      if (reference.uri === uri && record.cid) {
+        comparison = reference.cid === record.cid
+          ? '<strong class="bsky-edit-detector-cid-match">Stimmt überein</strong>'
+          : '<strong class="bsky-edit-detector-cid-mismatch">CID weicht ab</strong>';
+      }
+      return `<td><code>${escapeHtml(reference.uri)}</code><code>${escapeHtml(reference.cid)}</code>${comparison}</td>`;
+    }
+
+    function row(view, label) {
+      const reply = view.record?.reply;
+      return `<tr>
+        <th scope="row">${escapeHtml(label)}<code>${escapeHtml(view.uri)}</code></th>
+        <td class="bsky-edit-detector-thread-text">${escapeHtml(view.record?.text) || "—"}</td>
+        <td><code>${escapeHtml(view.cid) || "—"}</code></td>
+        ${referenceCell(reply?.parent)}
+        ${referenceCell(reply?.root)}
+      </tr>`;
+    }
+
+    const replies = Array.isArray(thread.replies) ? thread.replies.filter((reply) => reply?.post) : [];
+    return `
+      <p><strong>Aktuelle Record-CID</strong><code>${escapeHtml(record.cid) || "—"}</code></p>
+      ${post.cid !== record.cid ? "<p>Thread-Ansicht und Record liefern unterschiedliche CIDs.</p>" : ""}
+      <section aria-label="Verlauf der Post-Fassungen">
+        <h3>Verlauf der Post-Fassungen</h3>
+        <div class="bsky-edit-detector-thread-diagram">Diagramm wird geladen …</div>
+      </section>
+      <div class="bsky-edit-detector-thread-table-wrap" tabindex="0" role="region" aria-label="CID-Referenzen">
+        <table class="bsky-edit-detector-thread-table">
+          <caption>Post und direkte Antworten aus der öffentlichen Thread-Ansicht</caption>
+          <thead><tr><th scope="col">Post</th><th scope="col" class="bsky-edit-detector-thread-text-heading">Text</th><th scope="col">CID in der Thread-Ansicht</th><th scope="col">Parent-Referenz</th><th scope="col">Root-Referenz</th></tr></thead>
+          <tbody>
+            ${row(post, "Ausgewählter Post")}
+            ${replies.map(({ post: reply }) => row(reply, `Antwort von @${reply.author?.handle || "unbekannt"}`)).join("")}
+          </tbody>
+        </table>
+      </div>
+      ${replies.length ? "" : "<p>Keine direkten Antworten in der API-Antwort verfügbar.</p>"}
+    `;
+  }
+
+  function diagramPostText(text) {
+    if (typeof text !== "string" || !text.trim()) return "";
+    return "<br/><br/>" + text.split(/\r?\n/).flatMap((line) => line.match(/.{1,56}(?:\s|$)|.{1,56}/gu) || [""])
+      .map((line) => line.replace(/[&#"<>%`\\]/g, (character) => `#${character.charCodeAt(0)};`))
+      .join("<br/>");
+  }
+
+  function threadDiagramSource(thread, record, uri) {
+    const cid = typeof record.cid === "string" ? record.cid : "";
+    const shortCid = (value) => value.replace(/[^a-z0-9]/gi, "").slice(0, 18);
+    const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "medium" });
+    const dateLabel = (timestamp, source) => Number.isFinite(timestamp)
+      ? `${source} ${dateFormat.format(timestamp)}`
+      : "Zeitpunkt unbekannt";
+    const currentIndexedAt = thread.post?.cid === cid ? Date.parse(thread.post.indexedAt) : NaN;
+    const currentTime = Number.isFinite(currentIndexedAt) ? currentIndexedAt : Date.parse(record.value?.createdAt);
+    const currentDate = dateLabel(currentTime, Number.isFinite(currentIndexedAt) ? "Indexiert am" : "Record-Zeit");
+    const timeline = [{
+      id: "current",
+      timestamp: currentTime,
+      label: `Aktuelle Fassung<br/>${currentDate}<br/>CID ${shortCid(cid) || "unbekannt"}${diagramPostText(record.value?.text)}`,
+    }];
+    const replies = Array.isArray(thread.replies) ? thread.replies : [];
+
+    for (const reply of replies) {
+      const post = reply?.post;
+      const parent = post?.record?.reply?.parent;
+      if (parent?.uri !== uri || typeof parent.cid !== "string" || !parent.cid) continue;
+      const handle = String(post.author?.handle || "").replace(/[^a-z0-9.-]/gi, "");
+      const indexedAt = Date.parse(post.indexedAt);
+      const timestamp = Number.isFinite(indexedAt) ? indexedAt : Date.parse(post.record.createdAt);
+      const date = dateLabel(timestamp, Number.isFinite(indexedAt) ? "Indexiert am" : "Record-Zeit");
+      timeline.push({
+        id: `reply${timeline.length}`,
+        timestamp,
+        parentCid: parent.cid,
+        label: `Antwort${handle ? `<br/>@${handle}` : ""}<br/>${date}<br/>Bezug auf CID ${shortCid(parent.cid)}${diagramPostText(post.record.text)}`,
+      });
+    }
+
+    const order = (timestamp) => Number.isFinite(timestamp) ? timestamp : Infinity;
+    timeline.sort((first, second) => order(first.timestamp) - order(second.timestamp));
+    const versions = new Set();
+    const lines = ["flowchart TB"];
+    let previousId = "";
+    for (const event of timeline) {
+      if (event.parentCid && event.parentCid !== cid && !versions.has(event.parentCid)) {
+        const versionId = `version${versions.size + 1}`;
+        versions.add(event.parentCid);
+        lines.push(`${versionId}["Referenzierte Fassung<br/>CID ${shortCid(event.parentCid)}<br/>Zeitpunkt unbekannt"]`);
+        lines.push(`${versionId} -.->|referenziert von| ${event.id}`);
+      }
+      lines.push(`${event.id}["${event.label}"]`);
+      if (previousId) lines.push(`${previousId} ${Number.isFinite(event.timestamp) ? "-->" : "-.->"} ${event.id}`);
+      previousId = event.id;
+    }
+    return lines.join("\n");
+  }
+
+  async function renderThreadDiagram(target, thread, record, uri) {
+    if (!target) return;
+    const source = threadDiagramSource(thread, record, uri);
+    const mermaid = globalThis.mermaid;
+    try {
+      if (!mermaid?.render) throw new Error("Mermaid fehlt im Content-Script.");
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        suppressErrorRendering: true,
+        htmlLabels: false,
+        flowchart: { wrappingWidth: 4096 },
+        theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+      });
+      const { svg } = await mermaid.render(
+        `threadline-diagram-${crypto.randomUUID()}`,
+        source,
+        target
+      );
+      if (target.isConnected) target.innerHTML = svg;
+    } catch (error) {
+      console.debug("Bsky Edit Detector: Verlaufsdiagramm konnte nicht gerendert werden.", error);
+      if (!target.isConnected) return;
+      const message = document.createElement("p");
+      message.textContent = mermaid?.render
+        ? "Mermaid konnte dieses Diagramm nicht rendern."
+        : "Mermaid wurde nicht geladen. Lade die Erweiterung und anschließend den Post-Tab neu.";
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Mermaid-Quelltext anzeigen";
+      const reason = document.createElement("p");
+      reason.textContent = String(error?.message || error);
+      const code = document.createElement("pre");
+      code.textContent = source;
+      details.append(summary, reason, code);
+      target.replaceChildren(message, details);
+    }
+  }
+
+  async function showThreadData(parsed) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "bsky-edit-detector-thread-dialog";
+    dialog.setAttribute("aria-label", "Thread-Daten");
+    dialog.innerHTML = `
+      <form method="dialog" class="bsky-edit-detector-actions"><button autofocus>Schließen</button></form>
+      <h2>Thread-Daten</h2>
+      <p role="status">Thread-Daten werden geladen …</p>
+      <div class="bsky-edit-detector-thread-content"></div>
+    `;
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    // Mermaid looks up its temporary SVG inside document.body.
+    document.body.appendChild(dialog);
+    dialog.showModal();
+
+    const status = dialog.querySelector('[role="status"]');
+    try {
+      const did = await resolveHandleToDid(parsed.actor);
+      if (!did) throw new Error("Konto konnte nicht aufgelöst werden.");
+      if (!dialog.open) return;
+      const uri = `at://${did}/app.bsky.feed.post/${parsed.rkey}`;
+      const [thread, record] = await Promise.all([
+        getPostThread(uri),
+        xrpc("com.atproto.repo.getRecord", {
+          repo: did,
+          collection: "app.bsky.feed.post",
+          rkey: parsed.rkey,
+        }, AbortSignal.timeout(5000)),
+      ]);
+      if (!dialog.open) return;
+      dialog.querySelector(".bsky-edit-detector-thread-content").innerHTML = renderThreadData(thread, record, uri);
+      status.textContent = "";
+      status.hidden = true;
+      await renderThreadDiagram(dialog.querySelector(".bsky-edit-detector-thread-diagram"), thread, record, uri);
+    } catch (error) {
+      console.debug("Bsky Edit Detector: Thread-Daten konnten nicht geladen werden.", error);
+      status.textContent = "Thread-Daten konnten nicht geladen werden. Schließe den Dialog und öffne ihn erneut.";
+    }
+  }
+
   /** Lädt die Post-Informationen und fügt Bearbeitungs- sowie Kontohinweise ein. @param {object} parsed Aufgelöste Post-URL. @param {Element|null} container Zugehöriger Post-Container. @returns {Promise<void>} Abschluss der Verarbeitung. */
   async function processPost(parsed, container) {
+    addThreadDataButton(container, parsed);
     try {
       const info = await getPostEditInfo(parsed);
       if (info.isEdited) addBadge(container, info);
@@ -854,7 +1108,7 @@
 
   /** Findet auf einer einzelnen Postseite zuerst den Container des aktuellen Posts. @param {object} parsed Aufgelöste URL des geöffneten Posts. @returns {Element|null} Passender Container oder null, solange die Seite noch lädt. */
   function findCurrentPostContainer(parsed) {
-    const links = document.querySelectorAll('a[href*="/profile/"][href*="/post/"]');
+    const links = document.querySelectorAll(POST_LINK_SELECTOR);
     for (const link of links) {
       const candidate = parsePostUrl(link.href);
       if (!candidate) continue;
@@ -882,7 +1136,7 @@
 
   /** Durchsucht Feed-Links und verarbeitet zusätzlich den direkt geöffneten Post. Keine Parameter. @returns {void} */
   function scanPage() {
-    const links = Array.from(document.querySelectorAll('a[href*="/profile/"][href*="/post/"]'));
+    const links = document.querySelectorAll(POST_LINK_SELECTOR);
     for (const link of links) processLink(link);
     processCurrentPostPage();
   }
@@ -898,14 +1152,32 @@
   window.addEventListener("popstate", refreshAfterHistoryNavigation);
 
   const extensionChrome = globalThis.chrome;
+  let threadDataSettingChanged = false;
   if (extensionChrome?.storage?.onChanged) {
     extensionChrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== "sync") return;
+      if (changes[THREAD_DATA_BUTTON_SETTING]) {
+        threadDataSettingChanged = true;
+        document.documentElement.toggleAttribute(
+          "data-bsky-edit-detector-hide-thread-data",
+          changes[THREAD_DATA_BUTTON_SETTING].newValue === false
+        );
+      }
       const hasEnabledChange = Boolean(changes[MUTUAL_STARDUST_SETTING]);
       const hasCountChange = Boolean(changes[MUTUAL_STARDUST_COUNT_SETTING]);
-      if (!hasEnabledChange && !hasCountChange) return;
+      const hasThemeChange = Boolean(changes[MUTUAL_STARDUST_THEME_SETTING]);
+      if (!hasEnabledChange && !hasCountChange && !hasThemeChange) return;
       refreshMutualStardust();
     });
+  }
+  if (extensionChrome?.storage?.sync) {
+    extensionChrome.storage.sync.get({ [THREAD_DATA_BUTTON_SETTING]: true }).then((settings) => {
+      if (threadDataSettingChanged) return;
+      document.documentElement.toggleAttribute(
+        "data-bsky-edit-detector-hide-thread-data",
+        settings[THREAD_DATA_BUTTON_SETTING] === false
+      );
+    }).catch(() => {});
   }
 
   scanPage();

@@ -5,9 +5,12 @@ const content = template.content.cloneNode(true);
 document.body.appendChild(content);
 
 const toggle = document.querySelector("#mutual-stardust-toggle");
+const theme = document.querySelector("#mutual-stardust-theme");
 const count = document.querySelector("#mutual-stardust-count");
 const countValue = document.querySelector("#mutual-stardust-count-value");
-const status = document.querySelector(".threadline-settings-status");
+const status = document.querySelector("#mutual-stardust-status");
+const threadDataToggle = document.querySelector("#thread-data-toggle");
+const threadDataStatus = document.querySelector("#thread-data-status");
 const MIN_MUTUAL_STARDUST_COUNT = 10;
 const MAX_MUTUAL_STARDUST_COUNT = 50;
 const DEFAULT_MUTUAL_STARDUST_COUNT = 20;
@@ -25,10 +28,14 @@ function normalizeMutualStardustCount(value) {
 async function readMutualStardustSettings() {
   const result = await chrome.storage.sync.get({
     mutualStardust: false,
+    mutualStardustTheme: "stardust",
     mutualStardustCount: DEFAULT_MUTUAL_STARDUST_COUNT,
   });
   return {
     enabled: result.mutualStardust === true,
+    theme: Array.from(theme.options).some((option) => option.value === result.mutualStardustTheme)
+      ? result.mutualStardustTheme
+      : "stardust",
     count: normalizeMutualStardustCount(result.mutualStardustCount),
   };
 }
@@ -43,9 +50,9 @@ function renderMutualStardustCount(symbolCount) {
 /** Aktualisiert den sichtbaren Status des Mutual-Sternenstaubs. @param {boolean} enabled Aktueller Schalterwert. @param {number} symbolCount Gültige Anzahl der Symbole pro Post. @returns {void} */
 function renderMutualStardustStatus(enabled, symbolCount) {
   if (enabled) {
-    status.textContent = `Sternenstaub für Mutuals ist eingeschaltet: ${symbolCount} Symbole pro Post.`;
+    status.textContent = `Mehr Spaß ist eingeschaltet: ${symbolCount} Symbole pro Post.`;
   } else {
-    status.textContent = "Sternenstaub für Mutuals ist ausgeschaltet.";
+    status.textContent = "Mehr Spaß ist ausgeschaltet.";
   }
 }
 
@@ -68,10 +75,14 @@ async function initializeSettings() {
   try {
     const settings = await readMutualStardustSettings();
     toggle.checked = settings.enabled;
+    theme.value = settings.theme;
     renderMutualStardustCount(settings.count);
     renderMutualStardustStatus(settings.enabled, settings.count);
   } catch {
     toggle.disabled = true;
+    theme.disabled = true;
+    count.disabled = true;
+    theme.disabled = true;
     count.disabled = true;
     status.textContent = "Die Einstellung ist derzeit nicht verfügbar.";
   }
@@ -80,6 +91,12 @@ async function initializeSettings() {
 toggle.addEventListener("change", () => {
   saveMutualStardustEnabled(toggle.checked).catch(() => {
     status.textContent = "Die Einstellung konnte nicht gespeichert werden.";
+  });
+});
+
+theme.addEventListener("change", () => {
+  chrome.storage.sync.set({ mutualStardustTheme: theme.value }).catch(() => {
+    status.textContent = "Das Thema konnte nicht gespeichert werden.";
   });
 });
 
@@ -94,3 +111,29 @@ count.addEventListener("change", () => {
 });
 
 void initializeSettings();
+
+async function initializeThreadDataSetting() {
+  try {
+    const settings = await chrome.storage.sync.get({ showThreadDataButton: true });
+    threadDataToggle.checked = settings.showThreadDataButton !== false;
+    threadDataToggle.disabled = false;
+  } catch {
+    threadDataStatus.textContent = "Die Einstellung ist derzeit nicht verfügbar.";
+  }
+}
+
+threadDataToggle.addEventListener("change", async () => {
+  const enabled = threadDataToggle.checked;
+  threadDataToggle.disabled = true;
+  threadDataStatus.textContent = "";
+  try {
+    await chrome.storage.sync.set({ showThreadDataButton: enabled });
+  } catch {
+    threadDataToggle.checked = !enabled;
+    threadDataStatus.textContent = "Die Einstellung konnte nicht gespeichert werden.";
+  } finally {
+    threadDataToggle.disabled = false;
+  }
+});
+
+void initializeThreadDataSetting();

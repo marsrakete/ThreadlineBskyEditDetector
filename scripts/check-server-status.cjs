@@ -49,6 +49,8 @@ async function checkWorker() {
   vm.runInContext(fs.readFileSync(path.join(root, "background.js"), "utf8"), worker);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://bsky.app/profile/a/post/1")', worker), true);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://mu.social/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://cope.works/profile/a/post/1")', worker), true);
+  assert.equal(vm.runInContext('isSupportedApplicationPage("https://cope.works.evil.example/")', worker), false);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.mu.social/profile/a/post/1")', worker), true);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://blacksky.app/profile/a/post/1")', worker), true);
   assert.equal(vm.runInContext('isSupportedApplicationPage("https://pds.blacksky.app/profile/a/post/1")', worker), true);

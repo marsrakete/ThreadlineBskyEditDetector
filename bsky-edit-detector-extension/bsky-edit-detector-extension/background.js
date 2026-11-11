@@ -141,7 +141,7 @@ function isSupportedApplicationPage(pageUrl) {
     return false;
   }
   const host = url.hostname.toLowerCase();
-  if (host === "bsky.app") {
+  if (host === "bsky.app" || host === "cope.works") {
     return true;
   }
   if (host === "mu.social" || host.endsWith(".mu.social")) {

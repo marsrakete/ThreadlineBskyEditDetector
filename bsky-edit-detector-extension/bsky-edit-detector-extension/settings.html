@@ -10,22 +10,48 @@
   <template id="threadline-settings-template">
     <main class="threadline-settings">
       <h1>Threadline Einstellungen</h1>
+      <section aria-labelledby="thread-data-heading">
+        <h2 id="thread-data-heading">Thread-Daten</h2>
+        <label class="threadline-settings-toggle threadline-settings-toggle--plain" for="thread-data-toggle">
+          <span class="threadline-settings-copy">
+            <span>„Thread-Daten“-Button anzeigen</span>
+            <small>Öffnet die Thread-Tabelle mit Texten und CID-Referenzen.</small>
+          </span>
+          <input id="thread-data-toggle" type="checkbox" role="switch" checked disabled>
+        </label>
+        <p id="thread-data-status" class="threadline-settings-status" aria-live="polite"></p>
+      </section>
       <section aria-labelledby="mutual-stardust-heading">
-        <h2 id="mutual-stardust-heading">Mutual-Sternenstaub</h2>
+        <h2 id="mutual-stardust-heading">Mehr Spaß</h2>
         <label class="threadline-settings-toggle" for="mutual-stardust-toggle">
           <img class="threadline-settings-wand" src="icons/magic-wand.svg" alt="">
           <span class="threadline-settings-copy">
-            <span>Sternenstaub für Mutuals</span>
+            <span>Animationen für Mutuals</span>
             <small>Zeigt bei gegenseitigem Folgen eine dezente Animation am Post.</small>
           </span>
           <input id="mutual-stardust-toggle" type="checkbox" role="switch">
         </label>
+        <label class="threadline-settings-slider threadline-settings-theme" for="mutual-stardust-theme">
+          Thema
+          <select id="mutual-stardust-theme">
+            <option value="stardust">Sternenstaub</option>
+            <option value="space">Weltraum</option>
+            <option value="carnival">Karneval</option>
+            <option value="birthday">Geburtstag</option>
+            <option value="flowers">Blumenwiese</option>
+            <option value="ocean">Ozean</option>
+            <option value="forest">Wald</option>
+            <option value="disco">Disco</option>
+            <option value="halloween">Halloween</option>
+            <option value="winter">Winterzauber</option>
+          </select>
+        </label>
         <div class="threadline-settings-slider">
-          <label for="mutual-stardust-count">Symbole pro Mutual-Posting <output id="mutual-stardust-count-value" for="mutual-stardust-count">20</output></label>
+          <label for="mutual-stardust-count">Symbole pro Post <output id="mutual-stardust-count-value" for="mutual-stardust-count">20</output></label>
           <input id="mutual-stardust-count" type="range" min="10" max="50" step="1" value="20">
           <small>Verteilt die gewählte Menge zufällig über die gesamte Post-Karte.</small>
         </div>
-        <p class="threadline-settings-status" aria-live="polite"></p>
+        <p id="mutual-stardust-status" class="threadline-settings-status" aria-live="polite"></p>
       </section>
     </main>
   </template>

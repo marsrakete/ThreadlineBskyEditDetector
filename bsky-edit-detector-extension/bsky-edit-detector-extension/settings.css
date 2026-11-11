@@ -45,6 +45,10 @@ body {
   cursor: pointer;
 }
 
+.threadline-settings-toggle--plain {
+  grid-template-columns: 1fr auto;
+}
+
 .threadline-settings-wand {
   display: block;
   width: 24px;
@@ -86,6 +90,20 @@ body {
 
 .threadline-settings-slider input {
   width: 100%;
+}
+
+.threadline-settings-theme {
+  grid-template-columns: 1fr;
+}
+
+.threadline-settings-theme select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, CanvasText 28%, transparent);
+  border-radius: 8px;
+  background: Canvas;
+  color: CanvasText;
+  font: inherit;
 }
 
 .threadline-settings-slider output {

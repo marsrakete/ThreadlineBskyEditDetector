@@ -1,4 +1,5 @@
-.bsky-edit-detector-badge {
+.bsky-edit-detector-badge,
+.bsky-edit-detector-thread-button {
   display: inline-flex;
   align-items: center;
   gap: 0.25em;
@@ -15,6 +16,88 @@
   vertical-align: middle;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.bsky-edit-detector-thread-button {
+  border-color: currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+.bsky-edit-detector-thread-button:hover,
+.bsky-edit-detector-thread-button:focus-visible {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+[data-bsky-edit-detector-hide-thread-data] .bsky-edit-detector-thread-button {
+  display: none;
+}
+
+.bsky-edit-detector-thread-dialog {
+  box-sizing: border-box;
+  width: min(96vw, 110rem);
+  max-height: calc(100vh - 2rem);
+  padding: 1.25rem;
+  border: 1px solid GrayText;
+  border-radius: 0.75rem;
+  background: Canvas;
+  color: CanvasText;
+  color-scheme: light dark;
+}
+
+.bsky-edit-detector-thread-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.bsky-edit-detector-thread-table-wrap {
+  overflow: auto;
+}
+
+.bsky-edit-detector-thread-diagram {
+  overflow: auto;
+  margin-block-end: 1rem;
+}
+
+.bsky-edit-detector-thread-table {
+  width: 100%;
+  min-width: 48rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.bsky-edit-detector-thread-table caption {
+  text-align: left;
+  padding-bottom: 0.5rem;
+}
+
+.bsky-edit-detector-thread-table th,
+.bsky-edit-detector-thread-table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid GrayText;
+  text-align: left;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.bsky-edit-detector-thread-text-heading {
+  width: 38%;
+}
+
+.bsky-edit-detector-thread-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bsky-edit-detector-thread-content code {
+  display: block;
+  margin-block: 0.25rem;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.bsky-edit-detector-cid-mismatch {
+  text-decoration: underline;
 }
 
 .bsky-edit-detector-badge:hover,
@@ -78,11 +161,11 @@
   position: absolute;
   left: var(--stardust-x);
   top: var(--stardust-y);
-  color: rgb(202, 138, 4);
-  font-size: 15px;
+  color: rgb(var(--stardust-color, 202, 138, 4));
+  font-size: var(--stardust-size, 15px);
   line-height: 1;
   opacity: 0.46;
-  text-shadow: 0 0 7px rgba(250, 204, 21, 0.8);
+  text-shadow: 0 0 7px rgb(var(--stardust-color, 202, 138, 4) / 65%);
   user-select: none;
 }
 
@@ -97,12 +180,12 @@
   0%,
   100% {
     opacity: 0.18;
-    transform: scale(0.82) rotate(-14deg) translate3d(0, 0, 0);
+    transform: scale(0.72) rotate(calc(var(--stardust-rotation, 0deg) - 14deg)) translate3d(-2px, 1px, 0);
   }
 
   50% {
     opacity: 0.94;
-    transform: scale(1.18) rotate(14deg) translate3d(2px, -3px, 0);
+    transform: scale(1.22) rotate(calc(var(--stardust-rotation, 0deg) + 14deg)) translate3d(3px, -4px, 0);
   }
 }
 

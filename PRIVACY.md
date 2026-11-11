@@ -2,7 +2,7 @@
 
 Last updated: September 8, 2026
 
-Threadline Bluesky Edit & PDS Status is a browser extension that identifies supported edited AT Protocol posts and displays connection and Personal Data Server (PDS) status information. This policy explains how the extension handles data while it is running on supported Bluesky, Mu, Blacksky, and Eurosky pages.
+Threadline Bluesky Edit & PDS Status is a browser extension that identifies supported edited AT Protocol posts and displays connection and Personal Data Server (PDS) status information. This policy explains how the extension handles data while it is running on supported Bluesky, Mu, Cope, Blacksky, and Eurosky pages.
 
 ## Data the extension reads
 
@@ -20,7 +20,7 @@ The local session record can contain authentication tokens. The extension does n
 
 The extension makes HTTPS requests only for its user-facing features:
 
-- To `public.api.bsky.app` for public AT Protocol post records and handle resolution.
+- To `public.api.bsky.app` for public AT Protocol post records, handle resolution, and public direct replies when checking whether they reference a different version of a post.
 - To `public.api.bsky.app` for public follow relationships and public reply-list membership when evaluating a WSocial reply restriction.
 - To `plc.directory` for the public DID document of a post author when checking whether the account uses the WSocial PDS.
 - To `status.bsky.app` for Bluesky's published overall service status and component status.
@@ -32,7 +32,7 @@ PDS health checks omit cookies and authentication credentials. The extension doe
 
 The extension does not operate a server and does not send collected data to the developer. It does not create a user account, use analytics, use advertising, or sell or share user data.
 
-Post and status results are kept only in the extension's memory for short-lived display and request caching. The extension does not write Bluesky session data, post data, PDS health results, or connection information to persistent extension storage. It stores only the Mutual stardust on/off preference in Chrome or Edge sync storage. Removing the extension clears its in-memory data; the preference follows the browser's sync-storage behavior. Browser-granted optional PDS access can be removed in the browser's extension settings.
+Post and status results are kept only in the extension's memory for short-lived display and request caching. The extension does not write Bluesky session data, post data, PDS health results, or connection information to persistent extension storage. It stores the Mutual stardust settings and Thread Data button visibility in Chrome or Edge sync storage. Removing the extension clears its in-memory data; saved settings follow the browser's sync-storage behavior. Browser-granted optional PDS access can be removed in the browser's extension settings.
 
 ## Your choices
 
